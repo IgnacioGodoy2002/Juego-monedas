@@ -69,7 +69,10 @@ export function createGoldButton(
         // under WebGL) doesn't do the same graceful weight substitution
         // browsers do for DOM/CSS text — an exact family+weight match is
         // what actually gets requested from the browser's loaded font set.
-        fontStyle: 'bold',
+        // 'normal' (400) here, not 'bold' — thinner, finer weight for every
+        // button using this helper (Jugar/Configuración in MenuScene,
+        // Continuar/Volver al menú in HUDScene's pause overlay).
+        fontStyle: 'normal',
         fontSize,
         color: GOLD_TEXT_COLOR,
     });
