@@ -1,10 +1,11 @@
 <html>
     <head>
         <meta charset="utf-8" />
-        <title>Orb Maker</title>
+        <title data-i18n="meta.title">Orb Maker</title>
         <meta name="theme-color" content="#000" />
         <meta
             name="description"
+            data-i18n-attr="content:meta.description"
             content="Un juego de rompecabezas donde fusionás orbes de energía para alcanzar el Supernova."
         />
         <meta name="robots" content="index, follow" />
@@ -57,19 +58,24 @@
             <div class="game pane">
                 <div id="content"></div>
                 <noscript>
+                    <!-- Not i18n-driven on purpose: without JavaScript, the
+                         i18next/translateDom() machinery that would pick the
+                         right language never runs either — there's no way to
+                         localize this specific message. Spanish, matching
+                         the project's fallback/primary language. -->
                     <div class="pane-overlay">
-                        <h3>Please enable JavaScript to play this game.</h3>
+                        <h3>Por favor, activá JavaScript para jugar este juego.</h3>
                     </div>
                 </noscript>
             </div>
             <div class="settings pane" style="display: none;">
                 <div class="top-space"></div>
-                <h1>Settings</h1>
+                <h1 data-i18n="settings.heading">Settings</h1>
                 <div class="space"></div>
                 <div class="settings-item-group">
                     <div class="settings-item setting theme-switch">
                         <div class="settings-item-column">
-                            <span>Theme</span>
+                            <span data-i18n="settings.themeLabel">Theme</span>
                         </div>
                         <div class="settings-item-column">
                             <span class="toggle">Orb Maker</span>
@@ -77,10 +83,38 @@
                     </div>
                     <div class="settings-item setting controls">
                         <div class="settings-item-column">
-                            <span>Controls</span>
+                            <span data-i18n="settings.controlsLabel">Controls</span>
                         </div>
                         <div class="settings-item-column">
                             <span class="toggle">Tap</span>
+                        </div>
+                    </div>
+                    <div class="settings-item setting-language">
+                        <div class="settings-item-column">
+                            <span data-i18n="settings.language">Idioma</span>
+                        </div>
+                        <div class="settings-item-column language-options">
+                            <button
+                                type="button"
+                                class="language-option"
+                                data-lang="es"
+                            >
+                                Español
+                            </button>
+                            <button
+                                type="button"
+                                class="language-option"
+                                data-lang="pt"
+                            >
+                                Português
+                            </button>
+                            <button
+                                type="button"
+                                class="language-option"
+                                data-lang="en"
+                            >
+                                English
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -91,6 +125,7 @@
                             href="https://www.flaticon.com/free-icons/finger"
                             title="finger icons"
                             target="_blank"
+                            data-i18n="settings.credits"
                             >Finger icon created by Freepik - Flaticon</a
                         >
                     </span>
@@ -108,10 +143,14 @@
         <div class="overlay-back"></div>
         <div id="landscape-overlay" style="display: none;">
             <div class="overlay-content">
-                <p>
+                <p data-i18n="landscape.message">
                     Please rotate your device to portrait mode to play the game.
                 </p>
-                <img src="assets/img/rotate-device.png" alt="Rotate device" />
+                <img
+                    src="assets/img/rotate-device.png"
+                    alt="Rotate device"
+                    data-i18n-attr="alt:landscape.rotateAlt"
+                />
             </div>
         </div>
         <template id="dialog">
@@ -129,14 +168,14 @@
         </template>
         <template id="how-to-play">
             <span class="how-to-play">
-                <h2>Cómo jugar</h2>
-                <span class="text"
+                <h2 data-i18n="howToPlay.heading">Cómo jugar</h2>
+                <span class="text" data-i18n="howToPlay.intro"
                     >Fusioná monedas en orden para obtener la SP.</span
                 >
                 <hr />
                 <br />
                 <div class="meaning">
-                    <span class="text"
+                    <span class="text" data-i18n="howToPlay.chain"
                         >Cobre -> Bronce -> Plata -> Oro -> Rubí -> Amatista
                         -> Platino -> Esmeralda -> Reina -> Zafiro -> Diamante
                         -> SP.</span
@@ -151,6 +190,7 @@
                         height="180"
                         role="img"
                         aria-label="Jerarquía de monedas"
+                        data-i18n-attr="aria-label:howToPlay.chainAriaLabel"
                     >
                         <circle
                             cx="100"
@@ -177,22 +217,22 @@
                     </svg>
                 </div>
                 <br />
-                <span class="text"
+                <span class="text" data-i18n="howToPlay.specialRule"
                     >Si juntás 3 monedas SP en contacto entre sí, explotan:
                     suman un bonus de puntos extra y liberan espacio en el
                     frasco para seguir jugando.</span
                 >
                 <br />
                 <br />
-                <span class="text">¡Buena suerte!</span>
+                <span class="text" data-i18n="howToPlay.goodLuck">¡Buena suerte!</span>
             </span>
         </template>
         <template id="error-dialog-content">
-            <span>
+            <span data-i18n="dialog.errorIntro">
                 The following error occurred:
             </span>
             <span class="error-text"></span>
-            <span>
+            <span data-i18n="dialog.errorOutro">
                 Please refresh the page and try again later.
             </span>
         </template>

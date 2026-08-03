@@ -1,0 +1,54 @@
+{
+    "menu": {
+        "title": "Fusioná Monedas",
+        "play": "Jugar",
+        "settings": "Configuración"
+    },
+    "hud": {
+        "score": "Puntaje:",
+        "highScore": "Récord:",
+        "gameOver": "¡Fin del juego!",
+        "newRecord": "¡Nuevo récord!",
+        "win": "¡Llegaste al Supernova! ¡Genial!\n¡Seguí así!",
+        "chainReaction": "¡Reacción en cadena! +{{points}} puntos",
+        "tapToPlay": "Tocá para soltar un orbe",
+        "next": "Siguiente"
+    },
+    "pause": {
+        "title": "Pausa",
+        "resume": "Continuar",
+        "backToMenu": "Volver al menú"
+    },
+    "settings": {
+        "heading": "Ajustes",
+        "themeLabel": "Tema",
+        "themeOrbMaker": "Orb Maker",
+        "themeNumbers": "Números",
+        "controlsLabel": "Controles",
+        "controlsMove": "Mover",
+        "controlsTap": "Tocar",
+        "themeChangeBlocked": "Solo podés cambiar el tema cuando no hay una partida en curso",
+        "credits": "Finger icon created by Freepik - Flaticon",
+        "language": "Idioma"
+    },
+    "howToPlay": {
+        "heading": "Cómo jugar",
+        "intro": "Fusioná monedas en orden para obtener la SP.",
+        "chain": "Cobre -> Bronce -> Plata -> Oro -> Rubí -> Amatista -> Platino -> Esmeralda -> Reina -> Zafiro -> Diamante -> SP.",
+        "chainAriaLabel": "Jerarquía de monedas",
+        "specialRule": "Si juntás 3 monedas SP en contacto entre sí, explotan: suman un bonus de puntos extra y liberan espacio en el frasco para seguir jugando.",
+        "goodLuck": "¡Buena suerte!"
+    },
+    "dialog": {
+        "errorIntro": "Ocurrió el siguiente error:",
+        "errorOutro": "Por favor, recargá la página e intentá de nuevo más tarde."
+    },
+    "landscape": {
+        "message": "Girá tu dispositivo a modo vertical para jugar.",
+        "rotateAlt": "Girar dispositivo"
+    },
+    "meta": {
+        "title": "Orb Maker",
+        "description": "Un juego de rompecabezas donde fusionás orbes de energía para alcanzar el Supernova."
+    }
+}

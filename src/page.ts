@@ -1,3 +1,5 @@
+import { translateDom } from './i18n';
+
 declare global {
     var feather: any;
 }
@@ -86,6 +88,11 @@ export const renderNotification = (msg) => {
 export const createDialogContentFromTemplate = (tmplContentId) => {
     const contentTmpl = document.querySelector(tmplContentId);
     const contentClone = contentTmpl.content.cloneNode(true);
+
+    // Template content is inert until cloned — a document-wide
+    // translateDom() sweep never sees it, so each clone needs its own pass
+    // right here, whatever language is current at the moment it's opened.
+    translateDom(contentClone as DocumentFragment);
 
     return contentClone;
 };

@@ -18,6 +18,15 @@ import {
     saveGameOptions,
 } from './storage';
 import { BGM_KEY, setBgmVolume } from './managers/Bgm';
+import {
+    initI18n,
+    t,
+    setLanguage,
+    getCurrentLanguage,
+    onLanguageChanged,
+    translateDom,
+    SupportedLanguage,
+} from './i18n';
 
 // Same 10-step granularity in both directions; rounded to one decimal so
 // repeated +/- clicks land on exact tenths (0.1 + 0.1 + ... in floating
@@ -45,6 +54,14 @@ global.gameState = loadGameState();
 global.debugEnabled =
     Boolean(process.env.IS_DEBUG) &&
     new URLSearchParams(window.location.search).get('debug') === '1';
+
+// Called once, here — everything below that needs a translated string
+// (the Phaser scenes booted in window.onload, the settings-pane wiring
+// further down) awaits this same promise instead of calling initI18n()
+// again. Resolves as soon as i18next itself is ready (synchronous, bundled
+// JSON) — does NOT wait for IP-based geolocation to finish for a
+// first-time visitor, see i18n/index.ts.
+const i18nReady = initI18n();
 
 class SuikaCloneGame extends Phaser.Game {
     constructor(config: Phaser.Types.Core.GameConfig) {
@@ -108,11 +125,13 @@ window.onload = () => {
     // which reflows on its own). document.fonts.ready resolves once every
     // @font-face referenced by currently-rendered CSS has loaded (or
     // failed), so waiting on it here avoids that silent fallback.
-    if (document.fonts) {
-        document.fonts.ready.then(startGame);
-    } else {
-        startGame();
-    }
+    //
+    // i18nReady (see its declaration above) gates the same boot: MenuScene/
+    // HUDScene call t() straight from create(), so i18next needs to be
+    // initialized — synchronously fast, bundled JSON, not waiting on IP
+    // geolocation — before the very first scene runs.
+    const fontsReady = document.fonts ? document.fonts.ready : Promise.resolve();
+    Promise.all([fontsReady, i18nReady]).then(startGame);
 };
 
 const helpLink: HTMLAnchorElement = document.querySelector('.help-link');
@@ -195,17 +214,39 @@ settingsLink.addEventListener('click', (e) => {
     toggleSettings();
 });
 
+// Reads current gameOptions + current language and (re)paints both toggle
+// labels — called on initial load (once i18n is ready, see i18nReady.then
+// below), after either setting actually changes, and on every
+// 'languageChanged' event (a first-time visitor's IP-based language
+// detection can resolve *after* this has already run once with the 'es'
+// interim default — see i18n/index.ts).
+function updateToggleLabels(): void {
+    const themeToggle = document.querySelector(
+        '.setting.theme-switch .toggle'
+    );
+    if (themeToggle) {
+        themeToggle.innerHTML =
+            gameOptions.theme === 'fruit_basket'
+                ? t('settings.themeOrbMaker')
+                : t('settings.themeNumbers');
+    }
+    const controlsToggle = document.querySelector('.setting.controls .toggle');
+    if (controlsToggle) {
+        controlsToggle.innerHTML =
+            gameOptions.controls === 'move'
+                ? t('settings.controlsMove')
+                : t('settings.controlsTap');
+    }
+}
+
 const settings = document.querySelectorAll('.setting');
 settings.forEach((setting) => {
     const elem = setting as HTMLDivElement;
-    const toggle = setting.querySelector('.toggle');
     setting.addEventListener('click', (e) => {
         let optionChanged = false;
         if (elem.classList.contains(THEME_SETTING_NAME)) {
             if (game.registry.get('gameStarted')) {
-                renderNotification(
-                    'Solo podés cambiar el tema cuando no hay una partida en curso'
-                );
+                renderNotification(t('settings.themeChangeBlocked'));
                 return;
             }
             gameOptions.theme =
@@ -213,28 +254,62 @@ settings.forEach((setting) => {
                     ? 'numbers'
                     : 'fruit_basket';
             game.events.emit('themeChange', gameOptions.theme);
-            toggle.innerHTML =
-                gameOptions.theme === 'fruit_basket'
-                    ? 'Orb Maker'
-                    : 'Números';
             optionChanged = true;
         } else if (elem.classList.contains(CONTROLS_SETTING_NAME)) {
             gameOptions.controls =
                 gameOptions.controls === 'tap' ? 'move' : 'tap';
             game.events.emit('controlsChange', gameOptions.controls);
-            toggle.innerHTML = gameOptions.controls === 'move' ? 'Mover' : 'Tocar';
             optionChanged = true;
         }
         if (optionChanged) {
             saveGameOptions(gameOptions);
+            updateToggleLabels();
         }
     });
-    if (elem.classList.contains(THEME_SETTING_NAME)) {
-        toggle.innerHTML =
-            gameOptions.theme === 'fruit_basket' ? 'Orb Maker' : 'Números';
-    } else if (elem.classList.contains(CONTROLS_SETTING_NAME)) {
-        toggle.innerHTML = gameOptions.controls === 'move' ? 'Mover' : 'Tocar';
-    }
+});
+
+// Paints the currently-active language button — called alongside
+// updateToggleLabels() at the same three points (initial load, after a
+// manual pick, and on every 'languageChanged' event).
+function updateLanguageButtonsActiveState(): void {
+    const current = getCurrentLanguage();
+    document
+        .querySelectorAll<HTMLButtonElement>('.language-option')
+        .forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.lang === current);
+        });
+}
+
+document
+    .querySelectorAll<HTMLButtonElement>('.language-option')
+    .forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const language = btn.dataset.lang as SupportedLanguage;
+            // Persists immediately and wins over IP detection from here on
+            // — see setLanguage()'s own comment in i18n/index.ts.
+            setLanguage(language);
+            btn.blur();
+        });
+    });
+
+// Everything above only *registers* click handlers — none of them call
+// t() until a user actually clicks something, by which point i18nReady
+// has long since resolved (bundled JSON, no network wait). These three
+// calls are the ones that need it immediately: painting real translated
+// text into the DOM the moment it's known, then keeping it in sync with
+// whatever changes later (a manual pick, or IP detection resolving for a
+// first-time visitor).
+void i18nReady.then(() => {
+    translateDom();
+    updateToggleLabels();
+    updateLanguageButtonsActiveState();
+
+    onLanguageChanged(() => {
+        translateDom();
+        updateToggleLabels();
+        updateLanguageButtonsActiveState();
+    });
 });
 
 const closeDialog = (dialog, overlayBackElem) => {

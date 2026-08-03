@@ -8,6 +8,7 @@ import {
     PANEL_BG,
     PANEL_BORDER,
 } from '../ui/GoldButton';
+import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
 
 const GAME_OVER_SCREEN_OFFSET: number = -200;
 const NEXT_ORB_PREVIEW_SIZE: number = 64;
@@ -41,6 +42,8 @@ function withLetterSpacing(value: string): string {
 export class HUDScene extends Phaser.Scene {
     private mainScene: Phaser.Scene;
 
+    private scoreLabelText: Phaser.GameObjects.Text;
+    private highScoreLabelText: Phaser.GameObjects.Text;
     private scoreText: Phaser.GameObjects.Text;
     private highscoreText: Phaser.GameObjects.Text;
     private score: number;
@@ -67,11 +70,15 @@ export class HUDScene extends Phaser.Scene {
         | Phaser.GameObjects.Graphics
         | Phaser.GameObjects.Text
     )[];
+    private pauseTitleText: Phaser.GameObjects.Text;
+    private pauseResumeButtonText: Phaser.GameObjects.Text;
+    private pauseMenuButtonText: Phaser.GameObjects.Text;
 
     // Same reasoning as MainScene.ts's boundOnControlsChange — this.game.
     // events is global and outlives this scene, so the exact function
     // reference needs to survive to be .off()'d on shutdown.
     private boundOnControlsChange = this.onControlsChange.bind(this);
+    private boundOnLanguageChanged = this.updateTranslatedTexts.bind(this);
 
     constructor() {
         super({
@@ -86,10 +93,10 @@ export class HUDScene extends Phaser.Scene {
     }
 
     create(): void {
-        this.add.text(
+        this.scoreLabelText = this.add.text(
             10,
             10,
-            withLetterSpacing('Puntaje:'),
+            withLetterSpacing(t('hud.score')),
             HUD_SCORE_TEXT_STYLE
         );
         this.scoreText = this.add.text(
@@ -98,10 +105,10 @@ export class HUDScene extends Phaser.Scene {
             withLetterSpacing('0'),
             HUD_SCORE_TEXT_STYLE
         );
-        this.add.text(
+        this.highScoreLabelText = this.add.text(
             10,
             30,
-            withLetterSpacing('Récord:'),
+            withLetterSpacing(t('hud.highScore')),
             HUD_SCORE_TEXT_STYLE
         );
         this.highscoreText = this.add.text(
@@ -155,21 +162,21 @@ export class HUDScene extends Phaser.Scene {
         this.gameOverText = this.add.text(
             (game.config.width as number) / 4,
             PLAY_AREA_CENTER_Y + GAME_OVER_SCREEN_OFFSET,
-            '¡Fin del juego!',
+            t('hud.gameOver'),
             { fontFamily: GAME_FONT_FAMILY }
         );
         this.gameOverText.setVisible(false);
         this.beatHighscoreText = this.add.text(
             (game.config.width as number) / 4,
             PLAY_AREA_CENTER_Y + 50 + GAME_OVER_SCREEN_OFFSET,
-            '¡Nuevo récord!',
+            t('hud.newRecord'),
             { fontFamily: GAME_FONT_FAMILY }
         );
         this.beatHighscoreText.setVisible(false);
         this.winText = this.add.text(
             (game.config.width as number) / 4,
             PLAY_AREA_CENTER_Y + GAME_OVER_SCREEN_OFFSET,
-            '¡Llegaste al Supernova! ¡Genial!\n¡Seguí así!',
+            t('hud.win'),
             { fontFamily: GAME_FONT_FAMILY }
         );
         this.winText.setVisible(false);
@@ -177,7 +184,7 @@ export class HUDScene extends Phaser.Scene {
         this.chainReactionText = this.add.text(
             0,
             0,
-            `¡Reacción en cadena! +${SUPERNOVA_CHAIN_BONUS} puntos`,
+            t('hud.chainReaction', { points: SUPERNOVA_CHAIN_BONUS }),
             { fontFamily: GAME_FONT_FAMILY }
         );
         this.chainReactionText.setOrigin(0.5);
@@ -187,7 +194,7 @@ export class HUDScene extends Phaser.Scene {
         this.instructionText = this.add.text(
             (game.config.width as number) / 2,
             PLAY_AREA_CENTER_Y - 50,
-            'Tocá para soltar un orbe',
+            t('hud.tapToPlay'),
             {
                 fontFamily: GAME_FONT_FAMILY,
                 fontSize: '24px',
@@ -279,7 +286,7 @@ export class HUDScene extends Phaser.Scene {
         this.nextFruitText = this.add.text(
             (game.config.width as number) - 40,
             10,
-            'Siguiente',
+            t('hud.next'),
             {
                 fontFamily: GAME_FONT_FAMILY,
                 fontSize: '13px',
@@ -347,37 +354,65 @@ export class HUDScene extends Phaser.Scene {
         );
         panel.setStrokeStyle(2, PANEL_BORDER, 0.9);
 
-        const title = this.add.text(centerX, centerY - 80, 'Pausa', {
+        this.pauseTitleText = this.add.text(centerX, centerY - 80, t('pause.title'), {
             fontFamily: GAME_FONT_FAMILY,
             fontStyle: 'bold',
             fontSize: '28px',
             color: '#f3e2bc',
         });
-        title.setOrigin(0.5);
+        this.pauseTitleText.setOrigin(0.5);
 
         const resumeButton = this.createPauseOverlayButton(
             centerX,
             centerY - 10,
-            'Continuar',
+            t('pause.resume'),
             () => this.closePauseOverlay()
         );
+        this.pauseResumeButtonText = resumeButton[1];
         const menuButton = this.createPauseOverlayButton(
             centerX,
             centerY + 60,
-            'Volver al menú',
+            t('pause.backToMenu'),
             () => this.returnToMenu()
         );
+        this.pauseMenuButtonText = menuButton[1];
 
         this.pauseOverlayElements = [
             backdrop,
             panel,
-            title,
+            this.pauseTitleText,
             ...resumeButton,
             ...menuButton,
         ];
         this.showPauseOverlay(false);
 
+        onLanguageChanged(this.boundOnLanguageChanged);
+        this.events.once('shutdown', () => {
+            offLanguageChanged(this.boundOnLanguageChanged);
+        });
+
         this.scene.bringToTop();
+    }
+
+    // Repaints every translated Text object in place — covers the case
+    // where a first-time visitor's IP-based language detection resolves
+    // *while* this scene is already showing (see i18n/index.ts). The
+    // score/highscore *values* (scoreText/highscoreText) aren't touched —
+    // they're numbers, not translated strings.
+    private updateTranslatedTexts(): void {
+        this.scoreLabelText.setText(withLetterSpacing(t('hud.score')));
+        this.highScoreLabelText.setText(withLetterSpacing(t('hud.highScore')));
+        this.gameOverText.setText(t('hud.gameOver'));
+        this.beatHighscoreText.setText(t('hud.newRecord'));
+        this.winText.setText(t('hud.win'));
+        this.chainReactionText.setText(
+            t('hud.chainReaction', { points: SUPERNOVA_CHAIN_BONUS })
+        );
+        this.instructionText.setText(t('hud.tapToPlay'));
+        this.nextFruitText.setText(t('hud.next'));
+        this.pauseTitleText.setText(t('pause.title'));
+        this.pauseResumeButtonText.setText(t('pause.resume'));
+        this.pauseMenuButtonText.setText(t('pause.backToMenu'));
     }
 
     updateScore(): void {

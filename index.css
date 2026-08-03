@@ -323,6 +323,32 @@ button.close {
     width: 60%;
 }
 
+/* Language row is its own thing, not one of the toggle-the-whole-row
+   .setting rows above (game.ts wires it with its own click handlers, one
+   per button, instead of the shared .setting delegation loop) — needs
+   pointer-events re-enabled since it's nested under the same
+   .settings-item > * { pointer-events: none; } rule those rows rely on to
+   make the *entire row* clickable as one unit. */
+.settings-item.setting-language .settings-item-column.language-options {
+    gap: 6px;
+}
+
+.language-option {
+    pointer-events: auto;
+    cursor: pointer;
+    font-size: 0.7em;
+    padding: 0.3em 0.6em;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--box-border-color);
+}
+
+.language-option.active {
+    background: var(--text-color);
+    color: var(--dialog-background-color);
+}
+
 .settings .settings-item .settings-item-column > .toggle {
     text-transform: capitalize;
 }

@@ -17,6 +17,7 @@
         "bump": "./scripts/bump.sh"
     },
     "dependencies": {
+        "i18next": "^26.3.6",
         "phaser": "^3.60.0"
     },
     "devDependencies": {

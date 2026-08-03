@@ -1,0 +1,54 @@
+{
+    "menu": {
+        "title": "Merge Coins",
+        "play": "Play",
+        "settings": "Settings"
+    },
+    "hud": {
+        "score": "Score:",
+        "highScore": "Record:",
+        "gameOver": "Game over!",
+        "newRecord": "New record!",
+        "win": "You reached the Supernova! Amazing!\nKeep it up!",
+        "chainReaction": "Chain reaction! +{{points}} points",
+        "tapToPlay": "Tap to drop a coin",
+        "next": "Next"
+    },
+    "pause": {
+        "title": "Paused",
+        "resume": "Resume",
+        "backToMenu": "Back to menu"
+    },
+    "settings": {
+        "heading": "Settings",
+        "themeLabel": "Theme",
+        "themeOrbMaker": "Orb Maker",
+        "themeNumbers": "Numbers",
+        "controlsLabel": "Controls",
+        "controlsMove": "Move",
+        "controlsTap": "Tap",
+        "themeChangeBlocked": "You can only change the theme when there's no game in progress",
+        "credits": "Finger icon created by Freepik - Flaticon",
+        "language": "Language"
+    },
+    "howToPlay": {
+        "heading": "How to play",
+        "intro": "Merge coins in order to get the SP.",
+        "chain": "Copper -> Bronze -> Silver -> Gold -> Ruby -> Amethyst -> Platinum -> Emerald -> Queen -> Sapphire -> Diamond -> SP.",
+        "chainAriaLabel": "Coin hierarchy",
+        "specialRule": "Bring 3 SP coins into contact with each other and they explode: earning an extra points bonus and freeing up space in the jar to keep playing.",
+        "goodLuck": "Good luck!"
+    },
+    "dialog": {
+        "errorIntro": "The following error occurred:",
+        "errorOutro": "Please refresh the page and try again later."
+    },
+    "landscape": {
+        "message": "Please rotate your device to portrait mode to play the game.",
+        "rotateAlt": "Rotate device"
+    },
+    "meta": {
+        "title": "Orb Maker",
+        "description": "A puzzle game where you merge energy orbs to reach the Supernova."
+    }
+}

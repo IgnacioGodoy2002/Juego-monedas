@@ -2,6 +2,7 @@ import { CANVAS_WIDTH } from '../config/boardLayout';
 import { renderDialog, createDialogContentFromTemplate } from '../page';
 import { loadBgm, getOrCreateBgm, playBgmIfNeeded } from '../managers/Bgm';
 import { createGoldButton, GAME_FONT_FAMILY } from '../ui/GoldButton';
+import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
 
 const BUTTON_WIDTH = 280;
 const BUTTON_HEIGHT = 64;
@@ -23,6 +24,17 @@ const MENU_JAR_CONTENT_HEIGHT = 2251;
 
 export class MenuScene extends Phaser.Scene {
     private bgm: Phaser.Sound.BaseSound;
+
+    // Kept so the languageChanged handler below can repaint them in place
+    // — MenuScene never reloads mid-session on its own, only on a full
+    // scene restart (which re-runs create() anyway), so this is purely for
+    // the case where a first-time visitor's IP-based language detection
+    // resolves *while* the menu is already showing (see i18n/index.ts).
+    private titleText: Phaser.GameObjects.Text;
+    private playButtonText: Phaser.GameObjects.Text;
+    private settingsButtonText: Phaser.GameObjects.Text;
+
+    private boundOnLanguageChanged = this.updateTranslatedTexts.bind(this);
 
     constructor() {
         super({
@@ -85,8 +97,8 @@ export class MenuScene extends Phaser.Scene {
         const titleY = 60;
         const titleFontSize = 36;
 
-        this.add
-            .text(centerX, titleY, 'Fusioná Monedas', {
+        this.titleText = this.add
+            .text(centerX, titleY, t('menu.title'), {
                 fontFamily: GAME_FONT_FAMILY,
                 // Explicit, not left to font-matching substitution — see
                 // GoldButton.ts's createGoldButton for why Canvas 2D text
@@ -118,15 +130,20 @@ export class MenuScene extends Phaser.Scene {
         // silver — and it lands around 55% down the content crop. Button Ys
         // below are comfortably above that line (jarTop + ~0.32 and ~0.45
         // of jarHeight), clear of both the neck above and the coins below.
-        this.createButton(centerX, jarTop + jarHeight * 0.32, 'Jugar', () => {
-            playBgmIfNeeded(this.bgm);
-            this.scene.start('MainScene');
-        });
+        [, this.playButtonText] = this.createButton(
+            centerX,
+            jarTop + jarHeight * 0.32,
+            t('menu.play'),
+            () => {
+                playBgmIfNeeded(this.bgm);
+                this.scene.start('MainScene');
+            }
+        );
 
-        this.createButton(
+        [, this.settingsButtonText] = this.createButton(
             centerX,
             jarTop + jarHeight * 0.45,
-            'Configuración',
+            t('menu.settings'),
             () => {
                 playBgmIfNeeded(this.bgm);
                 renderDialog(
@@ -135,6 +152,24 @@ export class MenuScene extends Phaser.Scene {
                 );
             }
         );
+
+        // Only fires if the language actually changes *after* this scene
+        // is already showing — see boundOnLanguageChanged's own comment
+        // above. MenuScene fully restarts on every menu<->game transition
+        // (create() re-runs from scratch each time — see MainScene.ts's
+        // returnToMenu() for why), so this can't accumulate duplicate
+        // subscriptions across restarts as long as it's paired with the
+        // 'shutdown' cleanup below every time.
+        onLanguageChanged(this.boundOnLanguageChanged);
+        this.events.once('shutdown', () => {
+            offLanguageChanged(this.boundOnLanguageChanged);
+        });
+    }
+
+    private updateTranslatedTexts(): void {
+        this.titleText.setText(t('menu.title'));
+        this.playButtonText.setText(t('menu.play'));
+        this.settingsButtonText.setText(t('menu.settings'));
     }
 
     private createButton(
@@ -142,8 +177,8 @@ export class MenuScene extends Phaser.Scene {
         y: number,
         label: string,
         onClick: () => void
-    ): void {
-        createGoldButton(
+    ): [Phaser.GameObjects.Graphics, Phaser.GameObjects.Text] {
+        return createGoldButton(
             this,
             x,
             y,

@@ -1,0 +1,54 @@
+{
+    "menu": {
+        "title": "Fundir Moedas",
+        "play": "Jogar",
+        "settings": "Configurações"
+    },
+    "hud": {
+        "score": "Pontuação:",
+        "highScore": "Recorde:",
+        "gameOver": "Fim de jogo!",
+        "newRecord": "Novo recorde!",
+        "win": "Você chegou à Supernova! Incrível!\nContinue assim!",
+        "chainReaction": "Reação em cadeia! +{{points}} pontos",
+        "tapToPlay": "Toque para soltar uma moeda",
+        "next": "Próxima"
+    },
+    "pause": {
+        "title": "Pausa",
+        "resume": "Continuar",
+        "backToMenu": "Voltar ao menu"
+    },
+    "settings": {
+        "heading": "Ajustes",
+        "themeLabel": "Tema",
+        "themeOrbMaker": "Orb Maker",
+        "themeNumbers": "Números",
+        "controlsLabel": "Controles",
+        "controlsMove": "Mover",
+        "controlsTap": "Tocar",
+        "themeChangeBlocked": "Você só pode mudar o tema quando não há uma partida em andamento",
+        "credits": "Finger icon created by Freepik - Flaticon",
+        "language": "Idioma"
+    },
+    "howToPlay": {
+        "heading": "Como jogar",
+        "intro": "Funda moedas em ordem para obter o SP.",
+        "chain": "Cobre -> Bronze -> Prata -> Ouro -> Rubi -> Ametista -> Platina -> Esmeralda -> Rainha -> Safira -> Diamante -> SP.",
+        "chainAriaLabel": "Hierarquia de moedas",
+        "specialRule": "Se você juntar 3 moedas SP em contato entre si, elas explodem: somam um bônus de pontos extra e liberam espaço no pote para continuar jogando.",
+        "goodLuck": "Boa sorte!"
+    },
+    "dialog": {
+        "errorIntro": "Ocorreu o seguinte erro:",
+        "errorOutro": "Por favor, recarregue a página e tente novamente mais tarde."
+    },
+    "landscape": {
+        "message": "Gire seu dispositivo para o modo retrato para jogar.",
+        "rotateAlt": "Girar dispositivo"
+    },
+    "meta": {
+        "title": "Orb Maker",
+        "description": "Um jogo de quebra-cabeça onde você funde orbes de energia para alcançar o Supernova."
+    }
+}

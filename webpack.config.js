@@ -38,6 +38,16 @@ module.exports = (env) => {
         },
         resolve: {
             extensions: ['.ts', '.js'],
+            // Without this, webpack 5's default mainFields order
+            // ('browser', 'module', 'main') picks i18next's ESM build
+            // (dist/esm/i18next.js, real `export {}` syntax) even though
+            // ts-loader compiles our TS down to CommonJS `require()` calls
+            // (tsconfig.json's `module: "commonjs"`) — the resulting
+            // ESM/CJS interop mismatch left the default import undefined
+            // at runtime. Preferring 'main' resolves to the CJS build
+            // instead (a plain `module.exports = instance`), which
+            // `require()` handles unambiguously.
+            mainFields: ['browser', 'main'],
             alias: {
                 phaser: path.resolve(
                     __dirname,
