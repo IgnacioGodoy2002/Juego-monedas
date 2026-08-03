@@ -1,0 +1,218 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Orb Maker</title>
+        <meta name="theme-color" content="#000" />
+        <meta
+            name="description"
+            content="Un juego de rompecabezas donde fusionás orbes de energía para alcanzar el Supernova."
+        />
+        <meta name="robots" content="index, follow" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
+        <meta charset="utf-8" />
+        <link rel="stylesheet" href="index.css" />
+        <link rel="icon" href="favicon.ico" type="image/x-icon" />
+        <link rel="manifest" href="manifest.json" />
+        <link rel="apple-touch-icon" href="icon152.png" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mobile-detect/1.4.5/mobile-detect.min.js"></script>
+        <script src="https://unpkg.com/feather-icons"></script>
+    </head>
+    <body class="light">
+        <div class="game-wrapper">
+            <div class="top-menu-wrapper">
+                <nav id="top" class="top-menu">
+                    <div class="icon-bar">
+                        <a class="help-link link-icon" href="#">
+                            <i data-feather="help-circle"></i>
+                        </a>
+                        <a class="settings-link link-icon" href="#">
+                            <i data-feather="settings"></i>
+                        </a>
+                        <a class="mute-link link-icon" href="#">
+                            <i data-feather="volume-2" class="icon-unmuted"></i>
+                            <i data-feather="volume-x" class="icon-muted"></i>
+                        </a>
+                        <a class="volume-down-link link-icon" href="#">
+                            <i data-feather="minus-circle"></i>
+                        </a>
+                        <a class="volume-up-link link-icon" href="#">
+                            <i data-feather="plus-circle"></i>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+            <div class="game pane">
+                <div id="content"></div>
+                <noscript>
+                    <div class="pane-overlay">
+                        <h3>Please enable JavaScript to play this game.</h3>
+                    </div>
+                </noscript>
+            </div>
+            <div class="settings pane" style="display: none;">
+                <div class="top-space"></div>
+                <h1>Settings</h1>
+                <div class="space"></div>
+                <div class="settings-item-group">
+                    <div class="settings-item setting theme-switch">
+                        <div class="settings-item-column">
+                            <span>Theme</span>
+                        </div>
+                        <div class="settings-item-column">
+                            <span class="toggle">Orb Maker</span>
+                        </div>
+                    </div>
+                    <div class="settings-item setting controls">
+                        <div class="settings-item-column">
+                            <span>Controls</span>
+                        </div>
+                        <div class="settings-item-column">
+                            <span class="toggle">Tap</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="space"></div>
+                <div class="footer">
+                    <span class="credits">
+                        <a
+                            href="https://www.flaticon.com/free-icons/finger"
+                            title="finger icons"
+                            target="_blank"
+                            >Finger icon created by Freepik - Flaticon</a
+                        >
+                    </span>
+                    <!-- <span class="snow-theme credits">
+                        Snow effect from
+                        <a href="https://embed.im/snow/" target="_blank"
+                            >embed.im</a
+                        >
+                    </span> -->
+                </div>
+                <div class="space"></div>
+            </div>
+        </div>
+        <div class="notification-area"></div>
+        <div class="overlay-back"></div>
+        <div id="landscape-overlay" style="display: none;">
+            <div class="overlay-content">
+                <p>
+                    Please rotate your device to portrait mode to play the game.
+                </p>
+                <img src="assets/img/rotate-device.png" alt="Rotate device" />
+            </div>
+        </div>
+        <template id="dialog">
+            <div class="dialog">
+                <button class="close"><i data-feather="x"></i></button>
+                <div class="dialog-content"></div>
+            </div>
+        </template>
+        <template id="notification">
+            <div class="notification">
+                <div class="notification-content">
+                    <span class="notification-message"></span>
+                </div>
+            </div>
+        </template>
+        <template id="how-to-play">
+            <span class="how-to-play">
+                <h2>Cómo jugar</h2>
+                <span class="text"
+                    >Fusioná monedas en orden para obtener la SP.</span
+                >
+                <hr />
+                <br />
+                <div class="meaning">
+                    <span class="text"
+                        >Cobre -> Bronce -> Plata -> Oro -> Rubí -> Amatista
+                        -> Platino -> Esmeralda -> Reina -> Zafiro -> Diamante
+                        -> SP.</span
+                    >
+                </div>
+                <br />
+                <div class="meaning">
+                    <svg
+                        class="orb-hierarchy"
+                        viewBox="0 0 200 200"
+                        width="180"
+                        height="180"
+                        role="img"
+                        aria-label="Jerarquía de monedas"
+                    >
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r="68"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-opacity="0.25"
+                            stroke-width="2"
+                            stroke-dasharray="4 4"
+                        />
+                        <circle cx="100" cy="32" r="16" fill="#b5651d" stroke="currentColor" stroke-width="2" />
+                        <circle cx="134" cy="41.1" r="16" fill="#cd7f32" stroke="currentColor" stroke-width="2" />
+                        <circle cx="158.9" cy="66" r="16" fill="#c0c0c0" stroke="currentColor" stroke-width="2" />
+                        <circle cx="168" cy="100" r="16" fill="#f0c419" stroke="currentColor" stroke-width="2" />
+                        <circle cx="158.9" cy="134" r="16" fill="#c81d3d" stroke="currentColor" stroke-width="2" />
+                        <circle cx="134" cy="158.9" r="16" fill="#8e44ad" stroke="currentColor" stroke-width="2" />
+                        <circle cx="100" cy="168" r="16" fill="#c9d3da" stroke="currentColor" stroke-width="2" />
+                        <circle cx="66" cy="158.9" r="16" fill="#27ae60" stroke="currentColor" stroke-width="2" />
+                        <circle cx="41.1" cy="134" r="16" fill="#e8b923" stroke="currentColor" stroke-width="2" />
+                        <circle cx="32" cy="100" r="16" fill="#2874d6" stroke="currentColor" stroke-width="2" />
+                        <circle cx="41.1" cy="66" r="16" fill="#b3e5fc" stroke="currentColor" stroke-width="2" />
+                        <circle cx="66" cy="41.1" r="18" fill="#ffd700" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+                <br />
+                <span class="text"
+                    >Si juntás 3 monedas SP en contacto entre sí, explotan:
+                    suman un bonus de puntos extra y liberan espacio en el
+                    frasco para seguir jugando.</span
+                >
+                <br />
+                <br />
+                <span class="text">¡Buena suerte!</span>
+            </span>
+        </template>
+        <template id="error-dialog-content">
+            <span>
+                The following error occurred:
+            </span>
+            <span class="error-text"></span>
+            <span>
+                Please refresh the page and try again later.
+            </span>
+        </template>
+        <script src="bundle.js"></script>
+        <script>
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            } else {
+                document.querySelector(
+                    "[data-feather='help-circle']"
+                ).innerText = '?';
+                document.querySelector("[data-feather='settings']").innerText =
+                    '⚙';
+                document.querySelector(
+                    ".settings [data-feather='x']"
+                ).innerText = 'X';
+                document.querySelector(
+                    "[data-feather='volume-2']"
+                ).innerText = '🔊';
+                document.querySelector(
+                    "[data-feather='volume-x']"
+                ).innerText = '🔇';
+                document.querySelector(
+                    "[data-feather='minus-circle']"
+                ).innerText = '-';
+                document.querySelector(
+                    "[data-feather='plus-circle']"
+                ).innerText = '+';
+            }
+
+        </script>
+    </body>
+</html>
