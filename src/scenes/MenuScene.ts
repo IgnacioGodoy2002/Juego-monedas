@@ -17,17 +17,20 @@ const BUTTON_FILL_BOTTOM = 0xa85f1e;
 const BUTTON_TEXT_COLOR = '#3a1f0a';
 const MENU_TEXT_STYLE = 'Georgia, "Times New Roman", serif';
 
-// assets/img/menu_jar.png's canvas is 388x644. Re-measured (alpha-scan):
-// the jar illustration occupies a 310x546 box within it, with a small
-// transparent margin on each side left over from the export. These 4
+// assets/img/menu_jar.png's canvas is 1600x2656 (re-extracted via rembg/
+// isnet-general-use against a dark-shelf source photo, replacing the old
+// 388x644 file). Re-measured (alpha-scan, threshold alpha>10 to ignore a
+// handful of stray alpha=1 noise pixels the model left at the four
+// corners): the jar illustration occupies a 1278x2251 box within it, with
+// a transparent margin on each side left over from the export. These 4
 // numbers must stay in sync with whatever the current file's real content
 // box is — hardcoding them against a previous file's crop is exactly what
 // made the jar render as a narrow sliver after the image was swapped once
 // already.
-const MENU_JAR_CONTENT_LEFT = 39;
-const MENU_JAR_CONTENT_TOP = 56;
-const MENU_JAR_CONTENT_WIDTH = 310;
-const MENU_JAR_CONTENT_HEIGHT = 546;
+const MENU_JAR_CONTENT_LEFT = 160;
+const MENU_JAR_CONTENT_TOP = 230;
+const MENU_JAR_CONTENT_WIDTH = 1278;
+const MENU_JAR_CONTENT_HEIGHT = 2251;
 
 export class MenuScene extends Phaser.Scene {
     private bgm: Phaser.Sound.BaseSound;

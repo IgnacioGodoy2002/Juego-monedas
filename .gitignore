@@ -1,6 +1,15 @@
 .DS_Store
 dist/
 
+# Python virtual envs (e.g. tools/bg-removal-venv, used one-off to run
+# rembg for asset background removal) — never meant to be committed;
+# ships megabytes of compiled deps like llvmlite.dll that blow past
+# GitHub's 100MB file limit.
+.venv/
+venv/
+env/
+tools/bg-removal-venv/
+
 # Created by https://www.gitignore.io/api/node
 # Edit at https://www.gitignore.io/?templates=node
 
