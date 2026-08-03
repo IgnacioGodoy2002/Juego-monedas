@@ -93,10 +93,26 @@ window.onload = () => {
             },
         },
     };
-    var game = new SuikaCloneGame(config);
-    global.game = game;
 
-    initSuraService().initialize();
+    const startGame = () => {
+        var game = new SuikaCloneGame(config);
+        global.game = game;
+
+        initSuraService().initialize();
+    };
+
+    // Phaser draws Text on <canvas>, not the DOM — if 'Baloo 2' (loaded via
+    // index.html's Google Fonts <link>) hasn't finished downloading yet,
+    // the very first frame renders with the browser's fallback font and
+    // never gets redrawn once the real font arrives (unlike DOM text,
+    // which reflows on its own). document.fonts.ready resolves once every
+    // @font-face referenced by currently-rendered CSS has loaded (or
+    // failed), so waiting on it here avoids that silent fallback.
+    if (document.fonts) {
+        document.fonts.ready.then(startGame);
+    } else {
+        startGame();
+    }
 };
 
 const helpLink: HTMLAnchorElement = document.querySelector('.help-link');

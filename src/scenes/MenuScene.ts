@@ -1,21 +1,10 @@
 import { CANVAS_WIDTH } from '../config/boardLayout';
 import { renderDialog, createDialogContentFromTemplate } from '../page';
 import { loadBgm, getOrCreateBgm, playBgmIfNeeded } from '../managers/Bgm';
+import { createGoldButton, GAME_FONT_FAMILY } from '../ui/GoldButton';
 
 const BUTTON_WIDTH = 280;
 const BUTTON_HEIGHT = 64;
-// Warm honey/amber, closer to the jar glass's own color, instead of the
-// paler yellow-to-brown gradient this had before — less "bright yellow",
-// more the same amber-orange the glass and the background photo already
-// share.
-const BUTTON_FILL_TOP = 0xf2a154;
-const BUTTON_FILL_BOTTOM = 0xa85f1e;
-// Dark bronze on light gold — same "printed label" treatment as the
-// Puntaje/Récord text in HUDScene.ts, for the same reason: a light fill
-// alone doesn't hold up against a light background, and a dark fill reads
-// clean without needing a stroke.
-const BUTTON_TEXT_COLOR = '#3a1f0a';
-const MENU_TEXT_STYLE = 'Georgia, "Times New Roman", serif';
 
 // assets/img/menu_jar.png's canvas is 1600x2656 (re-extracted via rembg/
 // isnet-general-use against a dark-shelf source photo, replacing the old
@@ -98,7 +87,11 @@ export class MenuScene extends Phaser.Scene {
 
         this.add
             .text(centerX, titleY, 'Fusioná Monedas', {
-                fontFamily: MENU_TEXT_STYLE,
+                fontFamily: GAME_FONT_FAMILY,
+                // Explicit, not left to font-matching substitution — see
+                // GoldButton.ts's createGoldButton for why Canvas 2D text
+                // needs an exact family+weight match.
+                fontStyle: 'bold',
                 fontSize: `${titleFontSize}px`,
                 color: '#fff5d6',
                 stroke: '#3a1f0a',
@@ -150,34 +143,15 @@ export class MenuScene extends Phaser.Scene {
         label: string,
         onClick: () => void
     ): void {
-        const left = x - BUTTON_WIDTH / 2;
-        const top = y - BUTTON_HEIGHT / 2;
-
-        // Rectangle GameObjects only do flat fills — a gradient needs
-        // Graphics, same approach as HUDScene's header backdrop.
-        const background = this.add.graphics();
-        background.fillGradientStyle(
-            BUTTON_FILL_TOP,
-            BUTTON_FILL_TOP,
-            BUTTON_FILL_BOTTOM,
-            BUTTON_FILL_BOTTOM,
-            1
+        createGoldButton(
+            this,
+            x,
+            y,
+            BUTTON_WIDTH,
+            BUTTON_HEIGHT,
+            label,
+            '28px',
+            onClick
         );
-        background.fillRect(left, top, BUTTON_WIDTH, BUTTON_HEIGHT);
-
-        background.setInteractive(
-            new Phaser.Geom.Rectangle(left, top, BUTTON_WIDTH, BUTTON_HEIGHT),
-            Phaser.Geom.Rectangle.Contains
-        );
-        background.input.cursor = 'pointer';
-        background.on('pointerdown', onClick);
-
-        this.add
-            .text(x, y, label, {
-                fontFamily: MENU_TEXT_STYLE,
-                fontSize: '28px',
-                color: BUTTON_TEXT_COLOR,
-            })
-            .setOrigin(0.5);
     }
 }

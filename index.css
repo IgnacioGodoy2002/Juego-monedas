@@ -31,7 +31,10 @@
     --background-color: var(--black);
     --fallback-background-color: var(--background-color);
     --item-background-color: rgba(0, 0, 0, 0);
-    --dialog-background-color: var(--gray-1);
+    /* Warm dark brown instead of neutral near-black — same amber-toned
+       family as the Phaser-side panels (HUDScene's pause overlay/
+       "Siguiente" panel use this exact value too). */
+    --dialog-background-color: #2b1c10;
 
     --text-color: var(--white);
     --letter-text-color: var(--white);
@@ -52,9 +55,13 @@
     --box-border-color-highlighted: var(--gray-5);
 
     --background-color: var(--white);
-    --dialog-background-color: var(--gray-6);
+    /* Warm cream instead of neutral gray — this is the theme actually
+       active by default (body has class="light" in index.html). */
+    --dialog-background-color: #f7ecd3;
 
-    --text-color: var(--black);
+    /* Warm dark bronze instead of pure black — same tone as the Phaser
+       button/HUD text color (MenuScene.ts's BUTTON_TEXT_COLOR). */
+    --text-color: #3a1f0a;
     --letter-text-color: var(--black);
     --letter-selected-text-color: var(--white);
 
@@ -82,7 +89,11 @@
 
 html {
     font-size: 125%;
-    font-family: sans-serif;
+    /* Loaded via index.html's Google Fonts <link>; falls back to a plain
+       sans (not a serif) since Baloo 2 is a rounded sans-style face — a
+       serif fallback would look tonally unrelated if the font ever fails
+       to load. */
+    font-family: 'Baloo 2', sans-serif;
 }
 
 body {
@@ -340,7 +351,7 @@ button.close {
 
     background-color: var(--dialog-background-color);
     color: var(--text-color);
-    border: 1px solid black;
+    border: 2px solid #8a5a2b;
     width: 300px;
     height: auto;
 

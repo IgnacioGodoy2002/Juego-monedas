@@ -1,6 +1,13 @@
 import { OrbTier, fruitTypeToTextureString } from '../gameobjects/Fruit';
 import { SUPERNOVA_CHAIN_BONUS } from './MainScene';
 import { PLAY_AREA_CENTER_Y, PLAY_AREA_TOP_OFFSET } from '../config/boardLayout';
+import {
+    createGoldButton,
+    GAME_FONT_FAMILY,
+    GOLD_FILL_TOP,
+    PANEL_BG,
+    PANEL_BORDER,
+} from '../ui/GoldButton';
 
 const GAME_OVER_SCREEN_OFFSET: number = -200;
 const NEXT_ORB_PREVIEW_SIZE: number = 64;
@@ -11,19 +18,14 @@ const PAUSE_PANEL_WIDTH = 320;
 const PAUSE_PANEL_HEIGHT = 230;
 const PAUSE_BUTTON_WIDTH = 240;
 const PAUSE_BUTTON_HEIGHT = 56;
-// Same warm honey/amber palette MenuScene.ts's buttons use (BUTTON_FILL_TOP
-// there) — flat here instead of gradient since this is a small modal, not
-// the main menu, but intentionally the same family of color.
-const PAUSE_BUTTON_FILL = 0xc47f3c;
-const PAUSE_BUTTON_TEXT_COLOR = '#3a1f0a';
 
-// "Luxury watch face" styling for the score/record readout: thin serif,
-// normal (non-bold) weight, dark bronze — reads as a label printed directly
-// on the game background rather than the cream/gold fill this used to have,
+// "Luxury watch face" styling for the score/record readout: normal
+// (non-bold) weight, dark bronze — reads as a label printed directly on
+// the game background rather than the cream/gold fill this used to have,
 // which needed a stroke just to stay legible; a dark fill has enough
 // contrast on its own, so no stroke here.
 const HUD_SCORE_TEXT_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontFamily: GAME_FONT_FAMILY,
     fontStyle: 'normal',
     color: '#3a1f0a',
 };
@@ -62,6 +64,7 @@ export class HUDScene extends Phaser.Scene {
     private pauseIcon: Phaser.GameObjects.Graphics;
     private pauseOverlayElements: (
         | Phaser.GameObjects.Rectangle
+        | Phaser.GameObjects.Graphics
         | Phaser.GameObjects.Text
     )[];
 
@@ -152,26 +155,30 @@ export class HUDScene extends Phaser.Scene {
         this.gameOverText = this.add.text(
             (game.config.width as number) / 4,
             PLAY_AREA_CENTER_Y + GAME_OVER_SCREEN_OFFSET,
-            '¡Fin del juego!'
+            '¡Fin del juego!',
+            { fontFamily: GAME_FONT_FAMILY }
         );
         this.gameOverText.setVisible(false);
         this.beatHighscoreText = this.add.text(
             (game.config.width as number) / 4,
             PLAY_AREA_CENTER_Y + 50 + GAME_OVER_SCREEN_OFFSET,
-            '¡Nuevo récord!'
+            '¡Nuevo récord!',
+            { fontFamily: GAME_FONT_FAMILY }
         );
         this.beatHighscoreText.setVisible(false);
         this.winText = this.add.text(
             (game.config.width as number) / 4,
             PLAY_AREA_CENTER_Y + GAME_OVER_SCREEN_OFFSET,
-            '¡Llegaste al Supernova! ¡Genial!\n¡Seguí así!'
+            '¡Llegaste al Supernova! ¡Genial!\n¡Seguí así!',
+            { fontFamily: GAME_FONT_FAMILY }
         );
         this.winText.setVisible(false);
 
         this.chainReactionText = this.add.text(
             0,
             0,
-            `¡Reacción en cadena! +${SUPERNOVA_CHAIN_BONUS} puntos`
+            `¡Reacción en cadena! +${SUPERNOVA_CHAIN_BONUS} puntos`,
+            { fontFamily: GAME_FONT_FAMILY }
         );
         this.chainReactionText.setOrigin(0.5);
         this.chainReactionText.setVisible(false);
@@ -182,6 +189,7 @@ export class HUDScene extends Phaser.Scene {
             PLAY_AREA_CENTER_Y - 50,
             'Tocá para soltar un orbe',
             {
+                fontFamily: GAME_FONT_FAMILY,
                 fontSize: '24px',
                 align: 'center',
             }
@@ -250,7 +258,7 @@ export class HUDScene extends Phaser.Scene {
             44,
             96,
             96,
-            0xc25cff,
+            GOLD_FILL_TOP,
             0.25
         );
 
@@ -260,9 +268,9 @@ export class HUDScene extends Phaser.Scene {
             44,
             80,
             80,
-            0x1c1c2e
+            PANEL_BG
         );
-        this.nextFruitBack.setStrokeStyle(2, 0xc25cff, 0.9);
+        this.nextFruitBack.setStrokeStyle(2, PANEL_BORDER, 0.9);
 
         // Add the next orb text — 13px (down from 24px) so "Siguiente" fits
         // the 80px-wide panel; Phaser's default Courier font is monospace at
@@ -273,9 +281,10 @@ export class HUDScene extends Phaser.Scene {
             10,
             'Siguiente',
             {
+                fontFamily: GAME_FONT_FAMILY,
                 fontSize: '13px',
                 align: 'center',
-                color: '#ffffff',
+                color: '#f3e2bc',
             }
         );
         this.nextFruitText.setOrigin(0.5);
@@ -304,9 +313,9 @@ export class HUDScene extends Phaser.Scene {
         const pauseIconY = 44; // same header row as the Siguiente panel
 
         this.pauseIcon = this.add.graphics();
-        this.pauseIcon.fillStyle(0x1c1c2e, 1);
+        this.pauseIcon.fillStyle(PANEL_BG, 1);
         this.pauseIcon.fillCircle(pauseIconX, pauseIconY, PAUSE_ICON_RADIUS);
-        this.pauseIcon.lineStyle(2, 0xc25cff, 0.9);
+        this.pauseIcon.lineStyle(2, PANEL_BORDER, 0.9);
         this.pauseIcon.strokeCircle(pauseIconX, pauseIconY, PAUSE_ICON_RADIUS);
         this.pauseIcon.fillStyle(0xffffff, 1);
         this.pauseIcon.fillRect(pauseIconX - 7, pauseIconY - 9, 5, 18);
@@ -334,14 +343,15 @@ export class HUDScene extends Phaser.Scene {
             centerY,
             PAUSE_PANEL_WIDTH,
             PAUSE_PANEL_HEIGHT,
-            0x1c1c2e
+            PANEL_BG
         );
-        panel.setStrokeStyle(2, 0xc25cff, 0.9);
+        panel.setStrokeStyle(2, PANEL_BORDER, 0.9);
 
         const title = this.add.text(centerX, centerY - 80, 'Pausa', {
-            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontFamily: GAME_FONT_FAMILY,
+            fontStyle: 'bold',
             fontSize: '28px',
-            color: '#ffffff',
+            color: '#f3e2bc',
         });
         title.setOrigin(0.5);
 
@@ -454,26 +464,17 @@ export class HUDScene extends Phaser.Scene {
         y: number,
         label: string,
         onClick: () => void
-    ): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] {
-        const background = this.add.rectangle(
+    ): [Phaser.GameObjects.Graphics, Phaser.GameObjects.Text] {
+        return createGoldButton(
+            this,
             x,
             y,
             PAUSE_BUTTON_WIDTH,
             PAUSE_BUTTON_HEIGHT,
-            PAUSE_BUTTON_FILL
+            label,
+            '20px',
+            onClick
         );
-        background.setInteractive();
-        background.input.cursor = 'pointer';
-        background.on('pointerdown', onClick);
-
-        const text = this.add.text(x, y, label, {
-            fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: '22px',
-            color: PAUSE_BUTTON_TEXT_COLOR,
-        });
-        text.setOrigin(0.5);
-
-        return [background, text];
     }
 
     private showPauseOverlay(visible: boolean): void {
