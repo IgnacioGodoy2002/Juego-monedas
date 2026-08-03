@@ -5,6 +5,18 @@ import { PLAY_AREA_CENTER_Y, PLAY_AREA_TOP_OFFSET } from '../config/boardLayout'
 const GAME_OVER_SCREEN_OFFSET: number = -200;
 const NEXT_ORB_PREVIEW_SIZE: number = 64;
 
+const PAUSE_ICON_RADIUS = 20;
+const PAUSE_OVERLAY_BACKDROP_ALPHA = 0.65;
+const PAUSE_PANEL_WIDTH = 320;
+const PAUSE_PANEL_HEIGHT = 230;
+const PAUSE_BUTTON_WIDTH = 240;
+const PAUSE_BUTTON_HEIGHT = 56;
+// Same warm honey/amber palette MenuScene.ts's buttons use (BUTTON_FILL_TOP
+// there) — flat here instead of gradient since this is a small modal, not
+// the main menu, but intentionally the same family of color.
+const PAUSE_BUTTON_FILL = 0xc47f3c;
+const PAUSE_BUTTON_TEXT_COLOR = '#3a1f0a';
+
 // "Luxury watch face" styling for the score/record readout: thin serif,
 // normal (non-bold) weight, dark bronze — reads as a label printed directly
 // on the game background rather than the cream/gold fill this used to have,
@@ -46,6 +58,17 @@ export class HUDScene extends Phaser.Scene {
     private nextFruitSprite: Phaser.GameObjects.Sprite;
 
     private chainReactionText: Phaser.GameObjects.Text;
+
+    private pauseIcon: Phaser.GameObjects.Graphics;
+    private pauseOverlayElements: (
+        | Phaser.GameObjects.Rectangle
+        | Phaser.GameObjects.Text
+    )[];
+
+    // Same reasoning as MainScene.ts's boundOnControlsChange — this.game.
+    // events is global and outlives this scene, so the exact function
+    // reference needs to survive to be .off()'d on shutdown.
+    private boundOnControlsChange = this.onControlsChange.bind(this);
 
     constructor() {
         super({
@@ -113,7 +136,18 @@ export class HUDScene extends Phaser.Scene {
             this.scene.setVisible(!isVisible, 'HUDScene');
         });
 
-        this.game.events.on('controlsChange', this.onControlsChange.bind(this));
+        this.game.events.on('controlsChange', this.boundOnControlsChange);
+
+        // Mirrors DebugScene.ts's own 'shutdown' listener pattern (see its
+        // create()) — same idea, applied to the one thing *this* scene
+        // registers on an emitter that outlives it. HUDScene's *other*
+        // cross-scene listeners (all the this.mainScene.events.on(...)
+        // calls above) don't need the same treatment: they live on
+        // MainScene's own emitter, and MainScene's returnToMenu() already
+        // wipes that whole emitter via removeAllListeners() when it stops.
+        this.events.on('shutdown', () => {
+            this.game.events.off('controlsChange', this.boundOnControlsChange);
+        });
 
         this.gameOverText = this.add.text(
             (game.config.width as number) / 4,
@@ -261,6 +295,78 @@ export class HUDScene extends Phaser.Scene {
         this.nextFruitSprite.setVisible(false);
         this.add.existing(this.nextFruitSprite);
 
+        // --- Pause button + pause overlay ---
+        // Lives here (not MainScene) deliberately: MainScene gets fully
+        // paused — frozen, but still rendering underneath — so it can't
+        // run any of its own UI/input while the overlay is up. HUDScene
+        // stays fully active throughout.
+        const pauseIconX = (game.config.width as number) / 2;
+        const pauseIconY = 44; // same header row as the Siguiente panel
+
+        this.pauseIcon = this.add.graphics();
+        this.pauseIcon.fillStyle(0x1c1c2e, 1);
+        this.pauseIcon.fillCircle(pauseIconX, pauseIconY, PAUSE_ICON_RADIUS);
+        this.pauseIcon.lineStyle(2, 0xc25cff, 0.9);
+        this.pauseIcon.strokeCircle(pauseIconX, pauseIconY, PAUSE_ICON_RADIUS);
+        this.pauseIcon.fillStyle(0xffffff, 1);
+        this.pauseIcon.fillRect(pauseIconX - 7, pauseIconY - 9, 5, 18);
+        this.pauseIcon.fillRect(pauseIconX + 2, pauseIconY - 9, 5, 18);
+        this.enablePauseIcon();
+        this.pauseIcon.on('pointerdown', () => this.openPauseOverlay());
+
+        const centerX = (game.config.width as number) / 2;
+        const centerY = (game.config.height as number) / 2;
+
+        const backdrop = this.add.rectangle(
+            centerX,
+            centerY,
+            game.config.width as number,
+            game.config.height as number,
+            0x000000,
+            PAUSE_OVERLAY_BACKDROP_ALPHA
+        );
+        // Swallows clicks so they don't reach whatever's under the dimmed
+        // board while paused.
+        backdrop.setInteractive();
+
+        const panel = this.add.rectangle(
+            centerX,
+            centerY,
+            PAUSE_PANEL_WIDTH,
+            PAUSE_PANEL_HEIGHT,
+            0x1c1c2e
+        );
+        panel.setStrokeStyle(2, 0xc25cff, 0.9);
+
+        const title = this.add.text(centerX, centerY - 80, 'Pausa', {
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: '28px',
+            color: '#ffffff',
+        });
+        title.setOrigin(0.5);
+
+        const resumeButton = this.createPauseOverlayButton(
+            centerX,
+            centerY - 10,
+            'Continuar',
+            () => this.closePauseOverlay()
+        );
+        const menuButton = this.createPauseOverlayButton(
+            centerX,
+            centerY + 60,
+            'Volver al menú',
+            () => this.returnToMenu()
+        );
+
+        this.pauseOverlayElements = [
+            backdrop,
+            panel,
+            title,
+            ...resumeButton,
+            ...menuButton,
+        ];
+        this.showPauseOverlay(false);
+
         this.scene.bringToTop();
     }
 
@@ -341,5 +447,75 @@ export class HUDScene extends Phaser.Scene {
         );
         this.nextFruitSprite.setVisible(true);
         this.nextFruitText.setVisible(true);
+    }
+
+    private createPauseOverlayButton(
+        x: number,
+        y: number,
+        label: string,
+        onClick: () => void
+    ): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] {
+        const background = this.add.rectangle(
+            x,
+            y,
+            PAUSE_BUTTON_WIDTH,
+            PAUSE_BUTTON_HEIGHT,
+            PAUSE_BUTTON_FILL
+        );
+        background.setInteractive();
+        background.input.cursor = 'pointer';
+        background.on('pointerdown', onClick);
+
+        const text = this.add.text(x, y, label, {
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: '22px',
+            color: PAUSE_BUTTON_TEXT_COLOR,
+        });
+        text.setOrigin(0.5);
+
+        return [background, text];
+    }
+
+    private showPauseOverlay(visible: boolean): void {
+        this.pauseOverlayElements.forEach((el) => el.setVisible(visible));
+    }
+
+    private enablePauseIcon(): void {
+        this.pauseIcon.setInteractive(
+            new Phaser.Geom.Circle(
+                (game.config.width as number) / 2,
+                44,
+                PAUSE_ICON_RADIUS
+            ),
+            Phaser.Geom.Circle.Contains
+        );
+        this.pauseIcon.input.cursor = 'pointer';
+    }
+
+    private openPauseOverlay(): void {
+        this.scene.pause('MainScene');
+        this.pauseIcon.disableInteractive();
+        this.showPauseOverlay(true);
+    }
+
+    private closePauseOverlay(): void {
+        this.showPauseOverlay(false);
+        this.enablePauseIcon();
+        this.scene.resume('MainScene');
+    }
+
+    private returnToMenu(): void {
+        this.showPauseOverlay(false);
+        // MainScene's own 'returnToMenu' handler resets the board and stops
+        // itself (see MainScene.ts) — this scene's job is just to trigger
+        // that, then leave too. this.scene.start('MenuScene') stops THIS
+        // scene (HUDScene) as a side effect before starting MenuScene —
+        // same mechanism MenuScene's own "Jugar" button already relies on
+        // in reverse.
+        this.mainScene.events.emit('returnToMenu');
+        if (debugEnabled) {
+            this.scene.stop('DebugScene');
+        }
+        this.scene.start('MenuScene');
     }
 }

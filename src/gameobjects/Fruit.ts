@@ -152,19 +152,6 @@ export class Fruit extends Phaser.Physics.Matter.Image {
 
     private debugGraphics: Phaser.GameObjects.Graphics;
 
-    // Purely cosmetic — a slow, subtle rotation wobble so coins at rest
-    // don't look frozen. Rotates via `this.angle`, which Phaser's Matter
-    // Transform component mirrors onto the body's actual angle (there's no
-    // separate visual-only rotation on a Matter Image; Fruit *is* the
-    // physics body, not a sprite wrapping one). This is safe here
-    // specifically because the collider is a circle (`setCircle` below):
-    // Matter's collision resolution for circles depends only on the two
-    // centers' positions, never on body.angle, so continuously overwriting
-    // it has zero effect on falling/bouncing/merging — only the on-screen
-    // orientation changes. A non-circular collider would need an actual
-    // container-based split between visual and physics transforms instead.
-    private idleTween: Phaser.Tweens.Tween;
-
     constructor(
         world: Phaser.Physics.Matter.World,
         x: number,
@@ -182,24 +169,6 @@ export class Fruit extends Phaser.Physics.Matter.Image {
         this.setCircle((this.displayWidth / 2) * ORB_TIER_HITBOX_FRACTIONS[type]);
         this.lifetime = 0;
         this.debugGraphics = debugGraphics;
-        this.startIdleTween();
-    }
-
-    // Random duration/delay per coin so a whole pile doesn't wobble in
-    // lockstep (reads as artificial/synced instead of alive). `delay` only
-    // postpones when the tween's first step *starts*; Phaser doesn't touch
-    // `this.angle` at all until then, so there's no jump/pre-tilt visible
-    // while a coin waits out its random delay.
-    private startIdleTween(): void {
-        this.idleTween = this.scene.tweens.add({
-            targets: this,
-            angle: { from: -3, to: 3 },
-            duration: Phaser.Math.Between(2000, 3000),
-            delay: Phaser.Math.Between(0, 2000),
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-        });
     }
 
     public update(time: number, delta: number): void {
@@ -221,11 +190,6 @@ export class Fruit extends Phaser.Physics.Matter.Image {
     }
 
     public destroy(fromScene?: boolean): void {
-        // Stop before super.destroy() — Phaser treats a stopped tween as
-        // destroyed from this call onward (auto-removed by the Tween
-        // Manager next frame) and never touches its target again, so this
-        // guarantees no queued tween step writes to `this` after it's gone.
-        this.idleTween.stop();
         super.destroy(fromScene);
         this.debugGraphics.destroy(fromScene);
     }

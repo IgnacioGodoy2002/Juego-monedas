@@ -29,6 +29,42 @@ const SUPERNOVA_CLUSTER_SIZE = 3;
 // pair (instead of per-fruit) collapses all of those into a single sound.
 const COLLISION_SOUND_COOLDOWN_MS = 70;
 
+// Every custom event name ever registered on this.events, by MainScene
+// itself (the this.events.on(...) calls throughout create()) or by
+// HUDScene (this.mainScene.events.on(...) in HUDScene.ts — same emitter,
+// see returnToMenu()'s 'shutdown' listener below). Used to clear *only*
+// these specific events when returning to the menu — never a bare
+// this.events.removeAllListeners() with no argument. That call clears
+// EVERY event on this emitter, not just the game's own — including
+// Phaser's own internal 'start'/'update'/'postupdate' subscriptions that
+// MatterPhysics/TweenManager/Clock/Input/DisplayList rely on for their
+// *entire* lifecycle, not just their one-time shutdown cleanup. Learned
+// this the hard way: a bare removeAllListeners() here silently deletes
+// MatterPhysics's own 'start' listener (the one that recreates
+// this.matter.world after a shutdown), so the *second* "Jugar" click ever
+// re-entered with a null Matter world and crashed on world.setBounds().
+const MAIN_SCENE_CUSTOM_EVENT_NAMES = [
+    'updateScore',
+    'gameOver',
+    'returnToMenu',
+    'gameStarted',
+    'moveLeft',
+    'moveLeftStart',
+    'moveLeftStop',
+    'moveRight',
+    'moveRightStart',
+    'moveRightStop',
+    'dropFruit',
+    // Registered by HUDScene.ts, not MainScene.ts — included here because
+    // this.mainScene.events there is this exact emitter.
+    'gameInit',
+    'tap',
+    'win',
+    'nextFruit',
+    'supernovaChainReaction',
+    'toggleHUD',
+];
+
 // Fruits above this Y trigger the game-over countdown; above this (but not
 // yet the danger line) just pulses a soft warning. Both are anchored to the
 // top of the *play rectangle*, not the top of the canvas — the jar's neck
@@ -110,6 +146,15 @@ export class MainScene extends Phaser.Scene {
     // reaction explosion (Supernova has no fruitType + 1 to merge into).
     private supernovaContacts: Map<number, Set<number>> = new Map();
     private supernovaFruits: Map<number, Fruit> = new Map();
+
+    // Bound once (not inline via .bind(this) at the .on() call site) so
+    // returnToMenu() below can .off() these *exact* same references later.
+    // this.game.events is the single Game-wide emitter, shared forever
+    // across every scene restart — unlike this.events (this scene's own,
+    // wiped wholesale by removeAllListeners()), nothing in Phaser ever
+    // cleans this one up for you.
+    private boundOnControlsChange = this.onControlsChange.bind(this);
+    private boundOnThemeChange = this.onThemeChange.bind(this);
 
     constructor() {
         super({
@@ -198,21 +243,58 @@ export class MainScene extends Phaser.Scene {
             } catch {
                 // Service not initialised — standalone fallback, ignore.
             }
-
-            this.fruits.clear(true, true);
-            this.supernovaContacts.clear();
-            this.supernovaFruits.clear();
             this.gameManager.setGameOver(true);
-            this.registry.set('score', 0);
-            this.registry.set('gameStarted', false);
-            this.events.emit('updateScore');
-            this.highestFruit = 0;
-            this.setNextFruit(this.heldNextFruit);
-            if (this.registry.get('beatHighscore')) {
-                console.log('saving new high score to storage...');
-                gameState.highScore = this.gameManager.getHighScore();
-                saveGameState(gameState);
-            }
+            this.resetBoard();
+        });
+
+        // Emitted by HUDScene's pause overlay's "Volver al menú" button.
+        // Ends the run the same way a game-over does (see resetBoard) but
+        // skips the SURA session-completion call and the game-over screen
+        // — the player is leaving on their own terms, not losing — then
+        // tears this scene down for real via this.scene.stop() (see the
+        // 'shutdown' listener below for why the actual listener cleanup
+        // lives there instead of inline here).
+        this.events.on('returnToMenu', () => {
+            this.resetBoard();
+            this.scene.stop();
+        });
+
+        // Phaser always fully shuts a scene down before it can be started
+        // again (see SceneManager#start — there is no lighter-weight resume
+        // path), so the *next* "Jugar" click re-runs create() from scratch.
+        // Matter's world, every Tween (including each Fruit's idle wobble),
+        // every Timer, and every GameObject this scene ever created (fruits,
+        // player, the health bar) are already destroyed automatically by
+        // Phaser's own per-plugin shutdown hooks — confirmed by reading
+        // MatterPhysics/TweenManager/Clock/DisplayList's source, each one
+        // listens for this scene's own 'shutdown' event and clears itself.
+        //
+        // The cleanup below has to happen in ITS OWN 'shutdown' listener,
+        // registered here in create() — rather than inline in the
+        // 'returnToMenu' handler above, before calling scene.stop().
+        // this.events IS the same emitter Matter/Tweens/Clock/Input/
+        // DisplayList each register their own SHUTDOWN cleanup on
+        // (confirmed: Phaser's Systems.events and Scene.events are the same
+        // injected EventEmitter plugin instance). Listeners for the same
+        // event fire in registration order, and every one of those plugins
+        // subscribes at scene boot/start — before create() ever runs — so
+        // this listener (registered here, in create()) always fires after
+        // theirs.
+        //
+        // Only clear the specific event names in MAIN_SCENE_CUSTOM_EVENT_
+        // NAMES — never a bare this.events.removeAllListeners() with no
+        // argument. Learned this the hard way in a real multi-cycle play →
+        // pause → menu → replay browser test: a bare call also wipes
+        // Phaser's own 'start' subscription that MatterPhysics relies on to
+        // recreate this.matter.world after every shutdown, not just its
+        // one-time SHUTDOWN cleanup — so the *second* return to MainScene
+        // crashed with a null this.matter.world.
+        this.events.once('shutdown', () => {
+            this.game.events.off('controlsChange', this.boundOnControlsChange);
+            this.game.events.off('themeChange', this.boundOnThemeChange);
+            MAIN_SCENE_CUSTOM_EVENT_NAMES.forEach((eventName) =>
+                this.events.removeAllListeners(eventName)
+            );
         });
         this.events.on('gameStarted', () => {
             this.gameManager.setGameOver(false);
@@ -278,11 +360,8 @@ export class MainScene extends Phaser.Scene {
                 this.setNextFruit(this.heldNextFruit);
             }
         });
-        this.game.events.on('controlsChange', this.onControlsChange.bind(this));
-        this.game.events.on('themeChange', (newTheme: GameTheme) => {
-            // Update the next fruit sprite to the new theme
-            this.events.emit('nextFruit', this.nextFruit);
-        });
+        this.game.events.on('controlsChange', this.boundOnControlsChange);
+        this.game.events.on('themeChange', this.boundOnThemeChange);
 
         // Decorative jar frame — added first so it renders behind everything
         // else (fruits, player, bar, HUD). Purely visual, does not touch
@@ -524,6 +603,33 @@ export class MainScene extends Phaser.Scene {
         }
 
         this.registry.set('gameStarted', false);
+    }
+
+    // Shared by 'gameOver' (board overflowed) and 'returnToMenu' (player
+    // quit voluntarily via the pause menu) — both end the current run the
+    // same way: empty the jar, zero the score, let the next drop start
+    // clean. What differs between the two callers is what happens *around*
+    // this (game-over screen + SURA session completion vs. leaving the
+    // scene entirely), not the reset itself.
+    private resetBoard(): void {
+        this.fruits.clear(true, true);
+        this.supernovaContacts.clear();
+        this.supernovaFruits.clear();
+        this.registry.set('score', 0);
+        this.registry.set('gameStarted', false);
+        this.events.emit('updateScore');
+        this.highestFruit = 0;
+        this.setNextFruit(this.heldNextFruit);
+        if (this.registry.get('beatHighscore')) {
+            console.log('saving new high score to storage...');
+            gameState.highScore = this.gameManager.getHighScore();
+            saveGameState(gameState);
+        }
+    }
+
+    private onThemeChange(): void {
+        // Update the next fruit sprite to the new theme
+        this.events.emit('nextFruit', this.nextFruit);
     }
 
     // Small tinted-dot texture for the merge burst — generated once instead
