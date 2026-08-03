@@ -180,13 +180,16 @@ svg {
     margin-right: 0;
 }
 
-/* Help/settings are redundant on the main menu screen — MenuScene's own
-   "Configuración" button covers the same ground there — so MenuScene.ts
-   adds this class to <body> on create() (and MainScene.ts removes it on
-   its own create(), belt-and-suspenders in case entry order ever changes).
-   Mute stays visible everywhere; there's no in-scene equivalent for it. */
-body.menu-active .help-link,
-body.menu-active .settings-link {
+/* Help is redundant on the main menu screen — MenuScene's own "Cómo
+   jugar" mode covers the same ground there — so MenuScene.ts adds this
+   class to <body> on create() (and MainScene.ts removes it on its own
+   create(), belt-and-suspenders in case entry order ever changes). Mute
+   stays visible everywhere; there's no in-scene equivalent for it.
+   Settings (gear icon) used to be hidden here too, back when it only held
+   Theme/Controls — MenuScene's own buttons covered that. It also holds
+   the language picker now, which is relevant no matter which screen
+   you're on, so it stays visible on the menu too. */
+body.menu-active .help-link {
     display: none;
 }
 

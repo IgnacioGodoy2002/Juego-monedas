@@ -266,10 +266,14 @@ export class HUDScene extends Phaser.Scene {
             96,
             96,
             GOLD_FILL_TOP,
-            0.25
+            0.35
         );
 
-        // Add the next orb backing panel
+        // VARIANT B — dark Pausa palette. Same PANEL_BG/PANEL_BORDER as
+        // the pause overlay, but with a thicker border (3px, up from 2px)
+        // than Pausa's own panel — a small panel like this one needs more
+        // edge weight to read clearly against the jar's busy background
+        // than a big full-screen panel does.
         this.nextFruitBack = this.add.rectangle(
             (game.config.width as number) - 40,
             44,
@@ -277,7 +281,7 @@ export class HUDScene extends Phaser.Scene {
             80,
             PANEL_BG
         );
-        this.nextFruitBack.setStrokeStyle(2, PANEL_BORDER, 0.9);
+        this.nextFruitBack.setStrokeStyle(3, PANEL_BORDER, 1);
 
         // Add the next orb text — 13px (down from 24px) so "Siguiente" fits
         // the 80px-wide panel; Phaser's default Courier font is monospace at
