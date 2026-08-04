@@ -77,7 +77,7 @@ if (debugEnabled) {
 
 window.onload = () => {
     const config: Phaser.Types.Core.GameConfig = {
-        title: 'Suika Clone',
+        title: 'Coin Kingdom',
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         scene: scenes,

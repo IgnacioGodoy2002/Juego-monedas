@@ -1,14 +1,10 @@
 {
-    "name": "suika-clone",
+    "name": "coin-kingdom",
     "version": "0.1.1",
-    "description": "Clone of Suika Game made in Phaser 3 and TypeScript",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Coteh/suika-clone.git"
-    },
+    "description": "Coin fusion puzzle game made with Phaser 3 and TypeScript",
     "private": true,
-    "license": "MIT",
-    "author": "James Cote (Coteh)",
+    "license": "UNLICENSED",
+    "author": "Ignacio Godoy",
     "main": "src/game.ts",
     "scripts": {
         "dev": "webpack-dev-server --env NODE_ENV=dev",
