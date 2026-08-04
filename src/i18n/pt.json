@@ -22,7 +22,7 @@
     "settings": {
         "heading": "Ajustes",
         "themeLabel": "Tema",
-        "themeOrbMaker": "Orb Maker",
+        "themeOrbMaker": "Coin Kingdom",
         "themeNumbers": "Números",
         "controlsLabel": "Controles",
         "controlsMove": "Mover",
@@ -33,10 +33,15 @@
     },
     "howToPlay": {
         "heading": "Como jogar",
-        "intro": "Funda moedas em ordem para obter o SP.",
-        "chain": "Cobre -> Bronze -> Prata -> Ouro -> Rubi -> Ametista -> Platina -> Esmeralda -> Rainha -> Safira -> Diamante -> SP.",
+        "objectiveHeading": "Objetivo",
+        "intro": "Funda moedas em ordem para obter o GG.",
+        "controlsHeading": "Controles",
+        "controlsBody": "Toque ou clique para soltar uma moeda. Mova-a antes de soltar para escolher onde ela cai.",
+        "chain": "Cobre -> Bronze -> Prata -> Ouro -> Rubi -> Ametista -> Platina -> Esmeralda -> Rainha -> Safira -> Diamante -> GG.",
         "chainAriaLabel": "Hierarquia de moedas",
-        "specialRule": "Se você juntar 3 moedas SP em contato entre si, elas explodem: somam um bônus de pontos extra e liberam espaço no pote para continuar jogando.",
+        "specialRuleHeading": "Reação em cadeia",
+        "specialRule": "Se você juntar 3 moedas GG em contato entre si, elas explodem: somam um bônus de pontos extra e liberam espaço no pote para continuar jogando.",
+        "pauseBody": "Toque em ⏸ durante a partida para pausar ou voltar ao menu.",
         "goodLuck": "Boa sorte!"
     },
     "dialog": {
@@ -48,7 +53,7 @@
         "rotateAlt": "Girar dispositivo"
     },
     "meta": {
-        "title": "Orb Maker",
-        "description": "Um jogo de quebra-cabeça onde você funde orbes de energia para alcançar o Supernova."
+        "title": "Coin Kingdom",
+        "description": "Um jogo de quebra-cabeça onde você funde moedas para alcançar o Supernova."
     }
 }

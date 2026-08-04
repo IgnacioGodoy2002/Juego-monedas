@@ -22,7 +22,7 @@
     "settings": {
         "heading": "Settings",
         "themeLabel": "Theme",
-        "themeOrbMaker": "Orb Maker",
+        "themeOrbMaker": "Coin Kingdom",
         "themeNumbers": "Numbers",
         "controlsLabel": "Controls",
         "controlsMove": "Move",
@@ -33,10 +33,15 @@
     },
     "howToPlay": {
         "heading": "How to play",
-        "intro": "Merge coins in order to get the SP.",
-        "chain": "Copper -> Bronze -> Silver -> Gold -> Ruby -> Amethyst -> Platinum -> Emerald -> Queen -> Sapphire -> Diamond -> SP.",
+        "objectiveHeading": "Objective",
+        "intro": "Merge coins in order to get the GG.",
+        "controlsHeading": "Controls",
+        "controlsBody": "Tap or click to drop a coin. Move it before dropping to choose where it lands.",
+        "chain": "Copper -> Bronze -> Silver -> Gold -> Ruby -> Amethyst -> Platinum -> Emerald -> Queen -> Sapphire -> Diamond -> GG.",
         "chainAriaLabel": "Coin hierarchy",
-        "specialRule": "Bring 3 SP coins into contact with each other and they explode: earning an extra points bonus and freeing up space in the jar to keep playing.",
+        "specialRuleHeading": "Chain reaction",
+        "specialRule": "Bring 3 GG coins into contact with each other and they explode: earning an extra points bonus and freeing up space in the jar to keep playing.",
+        "pauseBody": "Tap ⏸ during the game to pause or return to the menu.",
         "goodLuck": "Good luck!"
     },
     "dialog": {
@@ -48,7 +53,7 @@
         "rotateAlt": "Rotate device"
     },
     "meta": {
-        "title": "Orb Maker",
-        "description": "A puzzle game where you merge energy orbs to reach the Supernova."
+        "title": "Coin Kingdom",
+        "description": "A puzzle game where you merge coins to reach the Supernova."
     }
 }

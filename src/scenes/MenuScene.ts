@@ -3,8 +3,10 @@ import { loadBgm, getOrCreateBgm, playBgmIfNeeded } from '../managers/Bgm';
 import {
     createGoldButton,
     GAME_FONT_FAMILY,
-    PANEL_BG,
-    PANEL_BORDER,
+    GOLD_BORDER,
+    GOLD_FILL_BOTTOM,
+    GOLD_FILL_TOP,
+    GOLD_TEXT_COLOR,
 } from '../ui/GoldButton';
 import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
 import { OrbTier, COIN_TIER_FILES } from '../gameobjects/Fruit';
@@ -34,7 +36,10 @@ const MENU_JAR_CONTENT_HEIGHT = 2251;
 const HOWTOPLAY_PANEL_WIDTH = 500;
 const HOWTOPLAY_PANEL_PADDING = 24;
 const HOWTOPLAY_SECTION_GAP = 20;
+const HOWTOPLAY_HEADER_GAP = 6;
+const HOWTOPLAY_HEADER_FONT_SIZE = '20px';
 const HOWTOPLAY_TEXT_FONT_SIZE = '17px';
+const HOWTOPLAY_HEADER_DOT_RADIUS = 4;
 const HOWTOPLAY_COIN_SIZE = 62;
 const HOWTOPLAY_COIN_COLS = 4;
 const HOWTOPLAY_COIN_GAP = 12;
@@ -59,8 +64,15 @@ export class MenuScene extends Phaser.Scene {
         | Phaser.GameObjects.Text
     )[];
 
+    private howToPlayObjectiveHeadingText: Phaser.GameObjects.Text;
     private howToPlayIntroText: Phaser.GameObjects.Text;
+    private howToPlayControlsHeadingText: Phaser.GameObjects.Text;
+    private howToPlayControlsBodyText: Phaser.GameObjects.Text;
+    private howToPlayChainHeadingText: Phaser.GameObjects.Text;
+    private howToPlaySpecialRuleHeadingText: Phaser.GameObjects.Text;
     private howToPlaySpecialRuleText: Phaser.GameObjects.Text;
+    private howToPlayPauseHeadingText: Phaser.GameObjects.Text;
+    private howToPlayPauseBodyText: Phaser.GameObjects.Text;
     private howToPlayGoodLuckText: Phaser.GameObjects.Text;
     private howToPlayBackButtonText: Phaser.GameObjects.Text;
     private howToPlayModeElements: (
@@ -68,6 +80,7 @@ export class MenuScene extends Phaser.Scene {
         | Phaser.GameObjects.Graphics
         | Phaser.GameObjects.Text
         | Phaser.GameObjects.Image
+        | Phaser.GameObjects.Arc
     )[];
 
     private boundOnLanguageChanged = this.updateTranslatedTexts.bind(this);
@@ -247,13 +260,27 @@ export class MenuScene extends Phaser.Scene {
     // through where the panel should have been opaque. Resized/
     // repositioned to its real dimensions at the end, once cursorY is
     // known.
+    //
+    // Section structure (Objetivo / Controles / Jerarquía de monedas /
+    // Reacción en cadena / Pausa) and the dot-accent header style mirror
+    // the approved wireframe (artifact "'Cómo jugar' como un segundo modo
+    // del mismo frasco") as closely as Phaser's Text/Graphics primitives
+    // allow. The wireframe's own panel fill (rgba(43,28,16,0.93), i.e.
+    // PANEL_BG) reads as near-black once placed over this game's actual
+    // (much brighter/golden) jar art instead of the wireframe's own dark
+    // page backdrop — so this panel intentionally uses GOLD_FILL_BOTTOM/
+    // GOLD_BORDER (the same warm brown already used for the *bottom* of
+    // every button's gradient) instead of PANEL_BG/PANEL_BORDER, which
+    // stay reserved for the pause overlay and "Siguiente" panel.
     private buildHowToPlayMode(centerX: number, top: number): void {
         const contentWidth = HOWTOPLAY_PANEL_WIDTH - HOWTOPLAY_PANEL_PADDING * 2;
+        const contentLeft = centerX - contentWidth / 2;
         const elements: (
             | Phaser.GameObjects.Rectangle
             | Phaser.GameObjects.Graphics
             | Phaser.GameObjects.Text
             | Phaser.GameObjects.Image
+            | Phaser.GameObjects.Arc
         )[] = [];
 
         const panel = this.add.rectangle(
@@ -261,29 +288,97 @@ export class MenuScene extends Phaser.Scene {
             top,
             HOWTOPLAY_PANEL_WIDTH,
             1,
-            PANEL_BG,
-            0.93
+            GOLD_FILL_BOTTOM,
+            0.94
         );
-        panel.setStrokeStyle(2, PANEL_BORDER, 0.9);
+        panel.setStrokeStyle(2, GOLD_BORDER, 1);
         elements.push(panel);
 
         let cursorY = top + HOWTOPLAY_PANEL_PADDING;
 
-        this.howToPlayIntroText = this.add.text(
-            centerX,
-            cursorY,
-            t('howToPlay.intro'),
-            {
+        // Small dot-accent + bold label, same "section header" pattern the
+        // wireframe used for all five sections — kept as a local closure
+        // (rather than a private method) since it needs to both push onto
+        // this call's `elements` array and advance the shared cursor.
+        const addSectionHeading = (label: string): Phaser.GameObjects.Text => {
+            const dot = this.add.circle(
+                contentLeft + HOWTOPLAY_HEADER_DOT_RADIUS,
+                cursorY + 12,
+                HOWTOPLAY_HEADER_DOT_RADIUS,
+                GOLD_FILL_TOP
+            );
+            elements.push(dot);
+
+            const heading = this.add.text(
+                contentLeft + HOWTOPLAY_HEADER_DOT_RADIUS * 2 + 8,
+                cursorY,
+                label,
+                {
+                    fontFamily: GAME_FONT_FAMILY,
+                    fontStyle: 'bold',
+                    fontSize: HOWTOPLAY_HEADER_FONT_SIZE,
+                    color: GOLD_TEXT_COLOR,
+                }
+            );
+            heading.setOrigin(0, 0);
+            elements.push(heading);
+            cursorY += heading.height + HOWTOPLAY_HEADER_GAP;
+            return heading;
+        };
+
+        // Left-aligned (not centered) body paragraph — matches the
+        // wireframe's own .htp-desc, which reads as normal left-aligned
+        // prose under its dot-accent header rather than centered blurb
+        // text.
+        const addBodyText = (label: string): Phaser.GameObjects.Text => {
+            const body = this.add.text(contentLeft, cursorY, label, {
                 fontFamily: GAME_FONT_FAMILY,
                 fontSize: HOWTOPLAY_TEXT_FONT_SIZE,
-                color: '#f3e2bc',
-                align: 'center',
+                color: GOLD_TEXT_COLOR,
                 wordWrap: { width: contentWidth },
-            }
+            });
+            body.setOrigin(0, 0);
+            elements.push(body);
+            cursorY += body.height + HOWTOPLAY_SECTION_GAP;
+            return body;
+        };
+
+        const addDivider = (): void => {
+            const divider = this.add.rectangle(
+                centerX,
+                cursorY,
+                contentWidth,
+                1,
+                GOLD_BORDER,
+                0.5
+            );
+            elements.push(divider);
+            cursorY += HOWTOPLAY_SECTION_GAP;
+        };
+
+        // --- Objetivo ---
+        this.howToPlayObjectiveHeadingText = addSectionHeading(
+            t('howToPlay.objectiveHeading')
         );
-        this.howToPlayIntroText.setOrigin(0.5, 0);
-        elements.push(this.howToPlayIntroText);
-        cursorY += this.howToPlayIntroText.height + HOWTOPLAY_SECTION_GAP;
+        this.howToPlayIntroText = addBodyText(t('howToPlay.intro'));
+
+        // --- Controles ---
+        this.howToPlayControlsHeadingText = addSectionHeading(
+            t('howToPlay.controlsHeading')
+        );
+        this.howToPlayControlsBodyText = addBodyText(
+            t('howToPlay.controlsBody')
+        );
+
+        addDivider();
+
+        // --- Jerarquía de monedas --- (reuses chainAriaLabel, already
+        // "Jerarquía de monedas" in all three languages and still used as
+        // the old DOM popup's SVG aria-label — same concept, dual-purpose
+        // rather than a duplicate key).
+        this.howToPlayChainHeadingText = addSectionHeading(
+            t('howToPlay.chainAriaLabel')
+        );
 
         // Coin hierarchy grid — real sprites in tier order, replacing what
         // used to be the "Cobre -> Bronce -> ... -> SP." prose
@@ -308,22 +403,18 @@ export class MenuScene extends Phaser.Scene {
         }
         cursorY += rows * cellSize - HOWTOPLAY_COIN_GAP + HOWTOPLAY_SECTION_GAP;
 
-        this.howToPlaySpecialRuleText = this.add.text(
-            centerX,
-            cursorY,
-            t('howToPlay.specialRule'),
-            {
-                fontFamily: GAME_FONT_FAMILY,
-                fontSize: HOWTOPLAY_TEXT_FONT_SIZE,
-                color: '#f3e2bc',
-                align: 'center',
-                wordWrap: { width: contentWidth },
-            }
+        addDivider();
+
+        // --- Reacción en cadena ---
+        this.howToPlaySpecialRuleHeadingText = addSectionHeading(
+            t('howToPlay.specialRuleHeading')
         );
-        this.howToPlaySpecialRuleText.setOrigin(0.5, 0);
-        elements.push(this.howToPlaySpecialRuleText);
-        cursorY +=
-            this.howToPlaySpecialRuleText.height + HOWTOPLAY_SECTION_GAP;
+        this.howToPlaySpecialRuleText = addBodyText(t('howToPlay.specialRule'));
+
+        // --- Pausa --- (reuses pause.title, "Pausa" in all three
+        // languages — same word, same concept as the real pause overlay).
+        this.howToPlayPauseHeadingText = addSectionHeading(t('pause.title'));
+        this.howToPlayPauseBodyText = addBodyText(t('howToPlay.pauseBody'));
 
         this.howToPlayGoodLuckText = this.add.text(
             centerX,
@@ -397,8 +488,21 @@ export class MenuScene extends Phaser.Scene {
         );
         this.playButtonText.setText(t('menu.play'));
         this.settingsButtonText.setText(t('menu.settings'));
+        this.howToPlayObjectiveHeadingText.setText(
+            t('howToPlay.objectiveHeading')
+        );
         this.howToPlayIntroText.setText(t('howToPlay.intro'));
+        this.howToPlayControlsHeadingText.setText(
+            t('howToPlay.controlsHeading')
+        );
+        this.howToPlayControlsBodyText.setText(t('howToPlay.controlsBody'));
+        this.howToPlayChainHeadingText.setText(t('howToPlay.chainAriaLabel'));
+        this.howToPlaySpecialRuleHeadingText.setText(
+            t('howToPlay.specialRuleHeading')
+        );
         this.howToPlaySpecialRuleText.setText(t('howToPlay.specialRule'));
+        this.howToPlayPauseHeadingText.setText(t('pause.title'));
+        this.howToPlayPauseBodyText.setText(t('howToPlay.pauseBody'));
         this.howToPlayGoodLuckText.setText(t('howToPlay.goodLuck'));
         this.howToPlayBackButtonText.setText(t('pause.backToMenu'));
     }

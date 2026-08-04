@@ -11,7 +11,7 @@
         "newRecord": "¡Nuevo récord!",
         "win": "¡Llegaste al Supernova! ¡Genial!\n¡Seguí así!",
         "chainReaction": "¡Reacción en cadena! +{{points}} puntos",
-        "tapToPlay": "Tocá para soltar un orbe",
+        "tapToPlay": "Tocá para soltar una moneda",
         "next": "Siguiente"
     },
     "pause": {
@@ -22,7 +22,7 @@
     "settings": {
         "heading": "Ajustes",
         "themeLabel": "Tema",
-        "themeOrbMaker": "Orb Maker",
+        "themeOrbMaker": "Coin Kingdom",
         "themeNumbers": "Números",
         "controlsLabel": "Controles",
         "controlsMove": "Mover",
@@ -33,10 +33,15 @@
     },
     "howToPlay": {
         "heading": "Cómo jugar",
-        "intro": "Fusioná monedas en orden para obtener la SP.",
-        "chain": "Cobre -> Bronce -> Plata -> Oro -> Rubí -> Amatista -> Platino -> Esmeralda -> Reina -> Zafiro -> Diamante -> SP.",
+        "objectiveHeading": "Objetivo",
+        "intro": "Fusioná monedas en orden para obtener la GG.",
+        "controlsHeading": "Controles",
+        "controlsBody": "Tocá o hacé click para soltar una moneda. Movela antes de soltarla para elegir dónde cae.",
+        "chain": "Cobre -> Bronce -> Plata -> Oro -> Rubí -> Amatista -> Platino -> Esmeralda -> Reina -> Zafiro -> Diamante -> GG.",
         "chainAriaLabel": "Jerarquía de monedas",
-        "specialRule": "Si juntás 3 monedas SP en contacto entre sí, explotan: suman un bonus de puntos extra y liberan espacio en el frasco para seguir jugando.",
+        "specialRuleHeading": "Reacción en cadena",
+        "specialRule": "Si juntás 3 monedas GG en contacto entre sí, explotan: suman un bonus de puntos extra y liberan espacio en el frasco para seguir jugando.",
+        "pauseBody": "Tocá ⏸ arriba durante la partida para pausar o volver al menú.",
         "goodLuck": "¡Buena suerte!"
     },
     "dialog": {
@@ -48,7 +53,7 @@
         "rotateAlt": "Girar dispositivo"
     },
     "meta": {
-        "title": "Orb Maker",
-        "description": "Un juego de rompecabezas donde fusionás orbes de energía para alcanzar el Supernova."
+        "title": "Coin Kingdom",
+        "description": "Un juego de rompecabezas donde fusionás monedas para alcanzar el Supernova."
     }
 }
