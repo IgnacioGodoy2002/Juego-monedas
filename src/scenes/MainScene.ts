@@ -4,6 +4,7 @@ import {
     ORB_TIER_PREFIXES,
     ORB_TIER_COLORS,
     COIN_TIER_FILES,
+    BLINK_COIN_FILES,
 } from '../gameobjects/Fruit';
 import { Player } from '../gameobjects/Player';
 import { GameManager } from '../managers/GameManager';
@@ -196,6 +197,25 @@ export class MainScene extends Phaser.Scene {
         // TODO: Iterate all themes and load them
         this.loadTheme('fruit_basket');
         this.loadTheme('numbers');
+
+        // Blink variants — one per tier in BLINK_COIN_FILES (10 of 12;
+        // diamante and GG opted out, see Fruit.ts). Every file here is a
+        // cleaned-up derivative, not the raw delivered upload — those came
+        // in fully opaque (alpha 255 everywhere, background baked in
+        // instead of real transparency, same issue the favicon source
+        // had), so each one went through a flood-fill background removal
+        // pass and a resize to match its normal texture's native
+        // resolution exactly (see Fruit.ts's scheduleNextBlink() comment
+        // for why that resolution match matters). Key follows the same
+        // `${prefix}_${theme}` convention as loadTheme()'s real textures,
+        // with a `_blink` suffix.
+        for (const tierKey of Object.keys(BLINK_COIN_FILES)) {
+            const tier = Number(tierKey) as OrbTier;
+            this.load.image(
+                `${ORB_TIER_PREFIXES[tier]}_fruit_basket_blink`,
+                `./assets/coins/${BLINK_COIN_FILES[tier]}`
+            );
+        }
     }
 
     loadTheme(theme: GameTheme): void {
@@ -210,11 +230,6 @@ export class MainScene extends Phaser.Scene {
 
     create(): void {
         this.createMergeParticleTexture();
-
-        // Undo MenuScene's help/settings hide — see index.css's
-        // `body.menu-active` rule. Removed here (not just on the "Jugar"
-        // click) so it's correct regardless of how MainScene gets entered.
-        document.body.classList.remove('menu-active');
 
         // Reuses the single shared instance MenuScene already created (and,
         // in practice, already started playing on the first menu button

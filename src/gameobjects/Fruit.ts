@@ -135,6 +135,26 @@ export const ORB_TIER_HITBOX_FRACTIONS: Record<OrbTier, number> = {
     [OrbTier.Supernova]: 0.8938,
 };
 
+// Tiers with a validated _blink variant (real transparency, same native
+// resolution as their normal texture — see MainScene.ts's preload()
+// comment on why that resolution match matters). OrbeSolar (diamante)
+// and Supernova (GG) are deliberately excluded — no blink for either.
+// Keyed by file name (not texture key) since that's what MainScene.ts's
+// preload() needs to load each one; Fruit.ts only cares that a tier is
+// a key of this record at all (see the constructor below).
+export const BLINK_COIN_FILES: Partial<Record<OrbTier, string>> = {
+    [OrbTier.Chispa]: '1_cobre_blink.png',
+    [OrbTier.Destello]: '2_bronce_blink.png',
+    [OrbTier.Fragmento]: 'plata_blink_transparent.png',
+    [OrbTier.Nucleo]: '4_oro_blink.png',
+    [OrbTier.Cristal]: '5_rubi_blink.png',
+    [OrbTier.Prisma]: '6_amatista_blink.png',
+    [OrbTier.Platino]: '12_platino_blink.png',
+    [OrbTier.Esmeralda]: '9_esmeralda_blink.png',
+    [OrbTier.Reina]: '11_reina_blink.png',
+    [OrbTier.Zafiro]: '10_zafiro_blink.png',
+};
+
 export function fruitTypeToTextureString(fruitType: OrbTier) {
     // Used to be `fruitType % 8` — a leftover guard from before
     // MainScene.ts's merge handler blocked merging two Supernovas (which
@@ -144,6 +164,14 @@ export function fruitTypeToTextureString(fruitType: OrbTier) {
     return `${ORB_TIER_PREFIXES[fruitType]}_${gameOptions.theme}`;
 }
 
+// Applies to every tier in BLINK_COIN_FILES (10 of 12 — diamante and GG
+// opted out). BLINK_MIN/MAX_DELAY_MS is the gap between blinks;
+// BLINK_DURATION_MS is how long the closed-eyes frame stays up before
+// reverting.
+const BLINK_MIN_DELAY_MS = 2000;
+const BLINK_MAX_DELAY_MS = 6000;
+const BLINK_DURATION_MS = 120;
+
 export class Fruit extends Phaser.Physics.Matter.Image {
     fruitType: OrbTier;
     readonly id: number;
@@ -151,6 +179,10 @@ export class Fruit extends Phaser.Physics.Matter.Image {
     lifetime: number;
 
     private debugGraphics: Phaser.GameObjects.Graphics;
+
+    private readonly normalTextureKey: string;
+    private readonly blinkTextureKey: string;
+    private blinkTimer: Phaser.Time.TimerEvent;
 
     constructor(
         world: Phaser.Physics.Matter.World,
@@ -169,6 +201,40 @@ export class Fruit extends Phaser.Physics.Matter.Image {
         this.setCircle((this.displayWidth / 2) * ORB_TIER_HITBOX_FRACTIONS[type]);
         this.lifetime = 0;
         this.debugGraphics = debugGraphics;
+
+        this.normalTextureKey = sprite;
+        if (type in BLINK_COIN_FILES) {
+            this.blinkTextureKey = `${sprite}_blink`;
+            this.scheduleNextBlink();
+        }
+    }
+
+    // Every file in BLINK_COIN_FILES is generated at *exactly* the same
+    // native resolution as its corresponding normal texture, specifically so
+    // this never needs to touch scale/size — a bare setTexture() only
+    // swaps the rendered frame. This matters more than it looks: on a
+    // Matter-physics GameObject, scaleX/scaleY are not plain properties
+    // (see Phaser.Physics.Matter.Components.Transform) — setting them
+    // calls Matter.Body.scale() on the underlying body, which really
+    // resizes the collision vertices and recomputes mass/inertia. An
+    // earlier version of this compensated for a resolution mismatch via
+    // setDisplaySize() after each swap, which (via that same scaleX/scaleY
+    // path) collapsed the body's mass by ~36x for the blink's duration —
+    // the coin lost its resting contact, dropped, and snapped back on
+    // revert. Keeping both textures the same native size avoids the whole
+    // scale path being touched at all.
+    private scheduleNextBlink(): void {
+        const delay = Phaser.Math.Between(BLINK_MIN_DELAY_MS, BLINK_MAX_DELAY_MS);
+        this.blinkTimer = this.scene.time.delayedCall(delay, () => {
+            this.setTexture(this.blinkTextureKey);
+            this.blinkTimer = this.scene.time.delayedCall(
+                BLINK_DURATION_MS,
+                () => {
+                    this.setTexture(this.normalTextureKey);
+                    this.scheduleNextBlink();
+                }
+            );
+        });
     }
 
     public update(time: number, delta: number): void {
@@ -190,6 +256,12 @@ export class Fruit extends Phaser.Physics.Matter.Image {
     }
 
     public destroy(fromScene?: boolean): void {
+        // Without this, a pending delayedCall from scheduleNextBlink()
+        // fires after merge/removal and calls setTexture on an already-
+        // destroyed Matter GameObject.
+        if (this.blinkTimer) {
+            this.blinkTimer.remove();
+        }
         super.destroy(fromScene);
         this.debugGraphics.destroy(fromScene);
     }

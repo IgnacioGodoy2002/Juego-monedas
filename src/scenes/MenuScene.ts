@@ -110,14 +110,6 @@ export class MenuScene extends Phaser.Scene {
     create(): void {
         const centerX = CANVAS_WIDTH / 2;
 
-        // Help is redundant here (this scene's own "Cómo jugar" mode
-        // covers the same ground) — hidden via index.css's
-        // `body.menu-active` rule. MainScene.create() removes this class,
-        // so it's back for actual gameplay, where there's no other way to
-        // reach it. Settings (gear icon, holds the language picker) is
-        // NOT hidden here — see index.css's comment on that rule.
-        document.body.classList.add('menu-active');
-
         // Created here (safe — no playback yet) so it's ready the instant
         // the first button click fires; MainScene reuses this same instance
         // via getOrCreateBgm instead of creating a second one.
@@ -151,10 +143,9 @@ export class MenuScene extends Phaser.Scene {
 
         // At full width the jar is tall enough (~86% of CANVAS_HEIGHT, fixed
         // by this asset's own aspect ratio) that there's very little room
-        // left above it. Help is hidden on this scene now (see the
-        // menu-active class above), leaving only the small mute/settings
-        // icons up top — nowhere near as wide as the old 3-icon row — so
-        // the title only needs to clear that, not a whole row.
+        // left above it. Only the small mute/settings icons are up top —
+        // nowhere near as wide as the old 3-icon row — so the title only
+        // needs to clear that, not a whole row.
         const titleY = 60;
         const titleFontSize = 36;
 

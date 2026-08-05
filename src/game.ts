@@ -5,11 +5,7 @@ import { HUDScene } from './scenes/HUDScene';
 import { DebugScene } from './scenes/DebugScene';
 import { initSuraService } from './integration/sura/SuraIntegrationService';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from './config/boardLayout';
-import {
-    createDialogContentFromTemplate,
-    renderDialog,
-    renderNotification,
-} from './page';
+import { renderNotification } from './page';
 import {
     GameOptions,
     GameState,
@@ -133,13 +129,6 @@ window.onload = () => {
     const fontsReady = document.fonts ? document.fonts.ready : Promise.resolve();
     Promise.all([fontsReady, i18nReady]).then(startGame);
 };
-
-const helpLink: HTMLAnchorElement = document.querySelector('.help-link');
-helpLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    renderDialog(createDialogContentFromTemplate('#how-to-play'), true);
-    helpLink.blur();
-});
 
 // Mutes every game sound (bgm + the collision effect) via Phaser's global
 // Sound Manager rather than routing a per-scene event through MainScene —

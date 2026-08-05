@@ -36,9 +36,6 @@
             <div class="top-menu-wrapper">
                 <nav id="top" class="top-menu">
                     <div class="icon-bar">
-                        <a class="help-link link-icon" href="#">
-                            <i data-feather="help-circle"></i>
-                        </a>
                         <a class="settings-link link-icon" href="#">
                             <i data-feather="settings"></i>
                         </a>
@@ -166,67 +163,6 @@
                 </div>
             </div>
         </template>
-        <template id="how-to-play">
-            <span class="how-to-play">
-                <h2 data-i18n="howToPlay.heading">Cómo jugar</h2>
-                <span class="text" data-i18n="howToPlay.intro"
-                    >Fusioná monedas en orden para obtener la SP.</span
-                >
-                <hr />
-                <br />
-                <div class="meaning">
-                    <span class="text" data-i18n="howToPlay.chain"
-                        >Cobre -> Bronce -> Plata -> Oro -> Rubí -> Amatista
-                        -> Platino -> Esmeralda -> Reina -> Zafiro -> Diamante
-                        -> SP.</span
-                    >
-                </div>
-                <br />
-                <div class="meaning">
-                    <svg
-                        class="orb-hierarchy"
-                        viewBox="0 0 200 200"
-                        width="180"
-                        height="180"
-                        role="img"
-                        aria-label="Jerarquía de monedas"
-                        data-i18n-attr="aria-label:howToPlay.chainAriaLabel"
-                    >
-                        <circle
-                            cx="100"
-                            cy="100"
-                            r="68"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-opacity="0.25"
-                            stroke-width="2"
-                            stroke-dasharray="4 4"
-                        />
-                        <circle cx="100" cy="32" r="16" fill="#b5651d" stroke="currentColor" stroke-width="2" />
-                        <circle cx="134" cy="41.1" r="16" fill="#cd7f32" stroke="currentColor" stroke-width="2" />
-                        <circle cx="158.9" cy="66" r="16" fill="#c0c0c0" stroke="currentColor" stroke-width="2" />
-                        <circle cx="168" cy="100" r="16" fill="#f0c419" stroke="currentColor" stroke-width="2" />
-                        <circle cx="158.9" cy="134" r="16" fill="#c81d3d" stroke="currentColor" stroke-width="2" />
-                        <circle cx="134" cy="158.9" r="16" fill="#8e44ad" stroke="currentColor" stroke-width="2" />
-                        <circle cx="100" cy="168" r="16" fill="#c9d3da" stroke="currentColor" stroke-width="2" />
-                        <circle cx="66" cy="158.9" r="16" fill="#27ae60" stroke="currentColor" stroke-width="2" />
-                        <circle cx="41.1" cy="134" r="16" fill="#e8b923" stroke="currentColor" stroke-width="2" />
-                        <circle cx="32" cy="100" r="16" fill="#2874d6" stroke="currentColor" stroke-width="2" />
-                        <circle cx="41.1" cy="66" r="16" fill="#b3e5fc" stroke="currentColor" stroke-width="2" />
-                        <circle cx="66" cy="41.1" r="18" fill="#ffd700" stroke="currentColor" stroke-width="2" />
-                    </svg>
-                </div>
-                <br />
-                <span class="text" data-i18n="howToPlay.specialRule"
-                    >Si juntás 3 monedas SP en contacto entre sí, explotan:
-                    suman un bonus de puntos extra y liberan espacio en el
-                    frasco para seguir jugando.</span
-                >
-                <br />
-                <br />
-                <span class="text" data-i18n="howToPlay.goodLuck">¡Buena suerte!</span>
-            </span>
-        </template>
         <template id="error-dialog-content">
             <span data-i18n="dialog.errorIntro">
                 The following error occurred:
@@ -241,9 +177,6 @@
             if (typeof feather !== 'undefined') {
                 feather.replace();
             } else {
-                document.querySelector(
-                    "[data-feather='help-circle']"
-                ).innerText = '?';
                 document.querySelector("[data-feather='settings']").innerText =
                     '⚙';
                 document.querySelector(
