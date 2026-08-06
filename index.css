@@ -180,6 +180,40 @@ svg {
     margin-right: 0;
 }
 
+/* Below the game-wrapper breakpoint (see the .game-wrapper media query
+   above), the wrapper is 100% viewport width, which means the Phaser
+   canvas itself (Scale.FIT against that same wrapper) shrinks 1:1 with
+   the viewport too — but this icon row lives in the DOM, not on canvas,
+   so its fixed-px size/position used to stay full-size while the canvas
+   (and HUDScene's "Siguiente" next-coin panel, anchored at the canvas's
+   own right edge) shrank underneath it, and on narrow phones the two
+   overlapped. `vw` sizing here mirrors that same shrink ratio: on this
+   layout 100vw of real viewport corresponds to CANVAS_WIDTH (580) canvas
+   units, so `Npx / 580 * 100` = the equivalent vw value, keeping every
+   icon (and the reserved right-hand gap) proportional to the canvas
+   instead of colliding with content anchored inside it. The 20px value
+   in the default rule above is left as-is for wider layouts (>1028px),
+   where the wrapper is only 50vw and vw-relative sizing would overshoot. */
+@media (max-width: 1028px) {
+    .top-menu > .icon-bar {
+        /* HUDScene's next-coin panel is 80 canvas-units wide, centered at
+           (canvas width - 40) — i.e. its left edge sits at canvas-relative
+           86.21% (500 / 580). Reserving that same 13.79vw (plus a small
+           fixed gap) keeps this row's right edge from ever reaching under
+           the panel, on any screen narrower than the breakpoint above. */
+        right: calc(13.79vw + 8px);
+    }
+
+    .top-menu > .icon-bar > a.link-icon {
+        margin-right: clamp(2px, 0.7vw, 4px);
+    }
+
+    .top-menu > .icon-bar > a.link-icon svg {
+        width: clamp(14px, 4.14vw, 24px);
+        height: clamp(14px, 4.14vw, 24px);
+    }
+}
+
 /* mute-link holds both the "volume-2" and "volume-x" feather icons at once;
    only one shows at a time, toggled by the .muted class the click handler
    in game.ts adds/removes. */

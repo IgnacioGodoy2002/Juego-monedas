@@ -9,7 +9,11 @@ import {
     GOLD_TEXT_COLOR,
 } from '../ui/GoldButton';
 import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
-import { OrbTier, COIN_TIER_FILES } from '../gameobjects/Fruit';
+import {
+    OrbTier,
+    COIN_TIER_FILES,
+    ORB_TIER_HITBOX_FRACTIONS,
+} from '../gameobjects/Fruit';
 
 const BUTTON_WIDTH = 280;
 const BUTTON_HEIGHT = 64;
@@ -43,6 +47,19 @@ const HOWTOPLAY_HEADER_DOT_RADIUS = 4;
 const HOWTOPLAY_COIN_SIZE = 62;
 const HOWTOPLAY_COIN_COLS = 4;
 const HOWTOPLAY_COIN_GAP = 12;
+// setDisplaySize(HOWTOPLAY_COIN_SIZE, ...) alone only normalizes each
+// coin's full CANVAS to the same box — it says nothing about how much of
+// that canvas is actual opaque coin versus transparent glow margin, and
+// that margin isn't consistent across files (e.g. 7_diamante.png was
+// deliberately cropped tight for its in-game display scale, see
+// ORB_TIER_SCALES in Fruit.ts). Dividing by each tier's own
+// ORB_TIER_HITBOX_FRACTIONS — the fraction of the canvas that's really
+// opaque coin, already measured per-file for the physics hitbox — cancels
+// that margin back out, so the *visible disc*, not just the canvas box,
+// ends up the same size for all 12. Chispa's fraction is the reference
+// since it's the value most tiers already share.
+const HOWTOPLAY_COIN_REFERENCE_FRACTION =
+    ORB_TIER_HITBOX_FRACTIONS[OrbTier.Chispa];
 
 type MenuMode = 'menu' | 'howToPlay';
 
@@ -71,8 +88,6 @@ export class MenuScene extends Phaser.Scene {
     private howToPlayChainHeadingText: Phaser.GameObjects.Text;
     private howToPlaySpecialRuleHeadingText: Phaser.GameObjects.Text;
     private howToPlaySpecialRuleText: Phaser.GameObjects.Text;
-    private howToPlayPauseHeadingText: Phaser.GameObjects.Text;
-    private howToPlayPauseBodyText: Phaser.GameObjects.Text;
     private howToPlayGoodLuckText: Phaser.GameObjects.Text;
     private howToPlayBackButtonText: Phaser.GameObjects.Text;
     private howToPlayModeElements: (
@@ -391,7 +406,13 @@ export class MenuScene extends Phaser.Scene {
                 cursorY + HOWTOPLAY_COIN_SIZE / 2 + row * cellSize,
                 `howToPlayCoin${tier}`
             );
-            icon.setDisplaySize(HOWTOPLAY_COIN_SIZE, HOWTOPLAY_COIN_SIZE);
+            // Cell layout (position/spacing) stays fixed at HOWTOPLAY_COIN_SIZE
+            // for all 12 — only the per-icon display size is adjusted, so the
+            // *opaque coin*, not just its canvas, ends up visually uniform.
+            const iconSize =
+                (HOWTOPLAY_COIN_SIZE * HOWTOPLAY_COIN_REFERENCE_FRACTION) /
+                ORB_TIER_HITBOX_FRACTIONS[tier as OrbTier];
+            icon.setDisplaySize(iconSize, iconSize);
             elements.push(icon);
         }
         cursorY += rows * cellSize - HOWTOPLAY_COIN_GAP + HOWTOPLAY_SECTION_GAP;
@@ -403,11 +424,6 @@ export class MenuScene extends Phaser.Scene {
             t('howToPlay.specialRuleHeading')
         );
         this.howToPlaySpecialRuleText = addBodyText(t('howToPlay.specialRule'));
-
-        // --- Pausa --- (reuses pause.title, "Pausa" in all three
-        // languages — same word, same concept as the real pause overlay).
-        this.howToPlayPauseHeadingText = addSectionHeading(t('pause.title'));
-        this.howToPlayPauseBodyText = addBodyText(t('howToPlay.pauseBody'));
 
         this.howToPlayGoodLuckText = this.add.text(
             centerX,
@@ -494,8 +510,6 @@ export class MenuScene extends Phaser.Scene {
             t('howToPlay.specialRuleHeading')
         );
         this.howToPlaySpecialRuleText.setText(t('howToPlay.specialRule'));
-        this.howToPlayPauseHeadingText.setText(t('pause.title'));
-        this.howToPlayPauseBodyText.setText(t('howToPlay.pauseBody'));
         this.howToPlayGoodLuckText.setText(t('howToPlay.goodLuck'));
         this.howToPlayBackButtonText.setText(t('pause.backToMenu'));
     }

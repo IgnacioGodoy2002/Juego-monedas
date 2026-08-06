@@ -40,7 +40,6 @@
         "chainAriaLabel": "Jerarquía de monedas",
         "specialRuleHeading": "Reacción en cadena",
         "specialRule": "Si juntás 3 monedas GG en contacto entre sí, explotan: suman un bonus de puntos extra y liberan espacio en el frasco para seguir jugando.",
-        "pauseBody": "Tocá ⏸ arriba durante la partida para pausar o volver al menú.",
         "goodLuck": "¡Buena suerte!"
     },
     "dialog": {
