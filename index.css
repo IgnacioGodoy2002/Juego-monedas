@@ -90,10 +90,10 @@
 html {
     font-size: 125%;
     /* Loaded via index.html's Google Fonts <link>; falls back to a plain
-       sans (not a serif) since Baloo 2 is a rounded sans-style face — a
+       sans (not a serif) since Fredoka is a rounded sans-style face — a
        serif fallback would look tonally unrelated if the font ever fails
        to load. */
-    font-family: 'Baloo 2', sans-serif;
+    font-family: 'Fredoka', sans-serif;
 }
 
 body {

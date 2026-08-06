@@ -114,7 +114,7 @@ window.onload = () => {
         initSuraService().initialize();
     };
 
-    // Phaser draws Text on <canvas>, not the DOM — if 'Baloo 2' (loaded via
+    // Phaser draws Text on <canvas>, not the DOM — if 'Fredoka' (loaded via
     // index.html's Google Fonts <link>) hasn't finished downloading yet,
     // the very first frame renders with the browser's fallback font and
     // never gets redrawn once the real font arrives (unlike DOM text,

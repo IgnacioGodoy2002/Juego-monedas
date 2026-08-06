@@ -1,6 +1,6 @@
 {
     "menu": {
-        "title": "Merge Coins",
+        "title": "Coin Kingdom",
         "play": "Play",
         "settings": "Settings"
     },
@@ -28,7 +28,6 @@
         "controlsMove": "Move",
         "controlsTap": "Tap",
         "themeChangeBlocked": "You can only change the theme when there's no game in progress",
-        "credits": "Finger icon created by Freepik - Flaticon",
         "language": "Language"
     },
     "howToPlay": {

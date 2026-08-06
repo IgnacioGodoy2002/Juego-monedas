@@ -21,9 +21,14 @@ export const PANEL_BORDER = 0x8a5a2b;
 // document.fonts.ready gate, which waits for it before the first Phaser
 // Text is ever created) — no font files shipped with the bundle. Falls
 // back to a generic sans instead of a serif if the font ever fails to
-// load, since a serif fallback would look tonally unrelated to Baloo 2's
+// load, since a serif fallback would look tonally unrelated to Fredoka's
 // rounded style.
-export const GAME_FONT_FAMILY = "'Baloo 2', sans-serif";
+export const GAME_FONT_FAMILY = "'Fredoka', sans-serif";
+
+// Corner rounding for every gold button — a plain fillRect/strokeRect
+// read as too sharp/blocky against the rounded jar and Fredoka's own
+// rounded letterforms.
+const BUTTON_CORNER_RADIUS = 18;
 
 export function createGoldButton(
     scene: Phaser.Scene,
@@ -46,14 +51,20 @@ export function createGoldButton(
         GOLD_FILL_BOTTOM,
         1
     );
-    background.fillRect(left, top, width, height);
+    background.fillRoundedRect(left, top, width, height, BUTTON_CORNER_RADIUS);
     // Thin bright line along the top edge only — reads as a highlight
     // catching the light, the cheapest approximation of a beveled/glassy
-    // surface without a second gradient or a shader.
+    // surface without a second gradient or a shader. Inset horizontally
+    // by the corner radius so it never overhangs the now-rounded corners.
     background.fillStyle(GOLD_BEVEL_HIGHLIGHT, 0.8);
-    background.fillRect(left, top, width, 2);
+    background.fillRect(
+        left + BUTTON_CORNER_RADIUS,
+        top,
+        width - BUTTON_CORNER_RADIUS * 2,
+        2
+    );
     background.lineStyle(2, GOLD_BORDER, 1);
-    background.strokeRect(left, top, width, height);
+    background.strokeRoundedRect(left, top, width, height, BUTTON_CORNER_RADIUS);
 
     background.setInteractive(
         new Phaser.Geom.Rectangle(left, top, width, height),

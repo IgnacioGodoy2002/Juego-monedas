@@ -1,6 +1,6 @@
 {
     "menu": {
-        "title": "Fusioná Monedas",
+        "title": "Coin Kingdom",
         "play": "Jugar",
         "settings": "Configuración"
     },
@@ -28,7 +28,6 @@
         "controlsMove": "Mover",
         "controlsTap": "Tocar",
         "themeChangeBlocked": "Solo podés cambiar el tema cuando no hay una partida en curso",
-        "credits": "Finger icon created by Freepik - Flaticon",
         "language": "Idioma"
     },
     "howToPlay": {

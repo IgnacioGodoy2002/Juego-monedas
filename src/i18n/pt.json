@@ -1,6 +1,6 @@
 {
     "menu": {
-        "title": "Fundir Moedas",
+        "title": "Coin Kingdom",
         "play": "Jogar",
         "settings": "Configurações"
     },
@@ -28,7 +28,6 @@
         "controlsMove": "Mover",
         "controlsTap": "Tocar",
         "themeChangeBlocked": "Você só pode mudar o tema quando não há uma partida em andamento",
-        "credits": "Finger icon created by Freepik - Flaticon",
         "language": "Idioma"
     },
     "howToPlay": {

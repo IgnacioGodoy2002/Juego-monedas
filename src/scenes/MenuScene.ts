@@ -206,8 +206,10 @@ export class MenuScene extends Phaser.Scene {
     // (multi-hue) pixels start showing up row-by-row — glass/neck are
     // uniformly amber, the coins are what introduce green/blue/purple/
     // silver — and it lands around 55% down the content crop. Button Ys
-    // below are comfortably above that line (jarTop + ~0.32 and ~0.45
+    // below are comfortably above that line (jarTop + ~0.32 and ~0.41
     // of jarHeight), clear of both the neck above and the coins below.
+    // Second button tightened from 0.45 to 0.41 — the wider gap read as
+    // too much dead air between "Jugar" and "Configuración".
     private buildMenuMode(
         centerX: number,
         jarTop: number,
@@ -226,7 +228,7 @@ export class MenuScene extends Phaser.Scene {
 
         const settingsButton = this.createButton(
             centerX,
-            jarTop + jarHeight * 0.45,
+            jarTop + jarHeight * 0.41,
             t('menu.settings'),
             () => {
                 playBgmIfNeeded(this.bgm);
