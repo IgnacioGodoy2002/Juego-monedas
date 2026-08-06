@@ -16,6 +16,7 @@ import {
     PLAY_AREA_WIDTH,
     PLAY_AREA_HEIGHT,
     PLAY_AREA_TOP_OFFSET,
+    CANVAS_WIDTH,
     CANVAS_HEIGHT,
     HEADER_HEIGHT,
 } from '../config/boardLayout';
@@ -156,6 +157,12 @@ export class MainScene extends Phaser.Scene {
     // cleans this one up for you.
     private boundOnControlsChange = this.onControlsChange.bind(this);
     private boundOnThemeChange = this.onThemeChange.bind(this);
+    // this.scale is the Game-wide ScaleManager (shared across scene
+    // restarts like this.game.events above), so this needs the same
+    // bound-handler + explicit .off() on shutdown as
+    // boundOnControlsChange/boundOnThemeChange, or every replay cycle
+    // would stack another duplicate listener.
+    private boundOnResize = this.onResize.bind(this);
 
     constructor() {
         super({
@@ -230,6 +237,7 @@ export class MainScene extends Phaser.Scene {
 
     create(): void {
         this.createMergeParticleTexture();
+        this.updateCameraFit();
 
         // Reuses the single shared instance MenuScene already created (and,
         // in practice, already started playing on the first menu button
@@ -307,10 +315,12 @@ export class MainScene extends Phaser.Scene {
         this.events.once('shutdown', () => {
             this.game.events.off('controlsChange', this.boundOnControlsChange);
             this.game.events.off('themeChange', this.boundOnThemeChange);
+            this.scale.off('resize', this.boundOnResize);
             MAIN_SCENE_CUSTOM_EVENT_NAMES.forEach((eventName) =>
                 this.events.removeAllListeners(eventName)
             );
         });
+        this.scale.on('resize', this.boundOnResize);
         this.events.on('gameStarted', () => {
             this.gameManager.setGameOver(false);
             this.gameManager.setDidWin(false);
@@ -571,9 +581,13 @@ export class MainScene extends Phaser.Scene {
             this
         );
 
+        // World-space position (fixed logical board — see updateCameraFit()),
+        // not screen space, so PLAY_AREA_WIDTH replaces the old
+        // `game.config.width` (which under Scale.RESIZE stays frozen at its
+        // boot-time value and no longer represents anything live anyway).
         const barObj = new Phaser.GameObjects.Image(
             this,
-            (game.config.width as number) / 2,
+            PLAY_AREA_WIDTH / 2,
             PLAY_AREA_TOP_OFFSET + 100,
             'bar'
         );
@@ -584,13 +598,29 @@ export class MainScene extends Phaser.Scene {
 
         // Enable input for the scene
         this.input.on('pointerup', (pointer) => {
-            // Ignore touches at the bottom of the canvas in case someone is swiping out on iPhone
-            if (pointer.y >= (game.config.height as number) - 100) {
+            // Ignore touches near the bottom of the real screen (not the
+            // logical board) in case someone is swiping out on iPhone —
+            // this has to stay in screen space, since it's about the
+            // physical edge of the device, not the fixed 580x1192 logical
+            // board the camera now zooms/crops into that screen.
+            if (pointer.y >= this.scale.height - 100) {
                 return;
             }
+            // pointer.x/y are always screen-space. With the camera now
+            // zoomed to cover the real canvas (updateCameraFit()), screen
+            // space and the fixed logical board no longer share the same
+            // coordinates once zoom != 1, so tap-to-drop has to go through
+            // the camera's inverse transform to land in the same world
+            // space the Player/Fruit physics bodies live in — using raw
+            // pointer.x here would drop the coin in the wrong place on any
+            // screen whose aspect ratio differs from the 580:1192 design.
+            const worldX = this.cameras.main.getWorldPoint(
+                pointer.x,
+                pointer.y
+            ).x;
             this.events.emit(
                 'dropFruit',
-                this.controls === 'tap' ? pointer.x : this.player.x
+                this.controls === 'tap' ? worldX : this.player.x
             );
         });
 
@@ -645,6 +675,44 @@ export class MainScene extends Phaser.Scene {
     private onThemeChange(): void {
         // Update the next fruit sprite to the new theme
         this.events.emit('nextFruit', this.nextFruit);
+    }
+
+    private onResize(gameSize: Phaser.Structs.Size): void {
+        console.log(
+            '[MainScene] resize ->',
+            gameSize.width,
+            gameSize.height
+        );
+        this.updateCameraFit();
+    }
+
+    // RESIZE migration, stage 3 — the physics world and every fixed-position
+    // game object below (jar, danger lines, health bar) deliberately stay
+    // in a FIXED 580x1192 logical space (PLAY_AREA_WIDTH/CANVAS_HEIGHT) no
+    // matter what the real canvas size is — this.matter.world.setBounds()
+    // further down is never recalculated on resize. The alternative
+    // (resizing the physics bounds live) would force deciding what happens
+    // to fruits already at rest when the boundary moves under them mid-game
+    // — Matter doesn't handle a shifting boundary against sleeping bodies
+    // gracefully, and every coin's ORB_TIER_SCALES/hitbox fraction this
+    // session was tuned against this exact fixed board.
+    //
+    // Instead the CAMERA zooms/centers to "cover" whatever the real canvas
+    // is: zoom = the LARGER of (real width / design width, real height /
+    // design height) — the opposite of Scale.FIT's `min`, which is what
+    // produced the letterbox bars this whole migration exists to remove.
+    // The fixed board always fills the screen with no visible background
+    // gap, at the cost of cropping a sliver off the left/right or top/
+    // bottom edges (the jar glass — full-bleed background art already, not
+    // gameplay-critical content) on aspect ratios that don't match the
+    // design 580:1192 exactly.
+    private updateCameraFit(): void {
+        const zoom = Math.max(
+            this.scale.width / CANVAS_WIDTH,
+            this.scale.height / CANVAS_HEIGHT
+        );
+        this.cameras.main.setZoom(zoom);
+        this.cameras.main.centerOn(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     }
 
     // Small tinted-dot texture for the merge burst — generated once instead

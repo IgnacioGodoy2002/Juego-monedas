@@ -1,4 +1,5 @@
 import { getManualBounds } from '../util/Bounds';
+import { PLAY_AREA_WIDTH } from '../config/boardLayout';
 
 export class Player extends Phaser.GameObjects.Sprite {
     private keys: Map<string, Phaser.Input.Keyboard.Key>;
@@ -33,6 +34,15 @@ export class Player extends Phaser.GameObjects.Sprite {
             this.scene.events.emit('dropFruit', this.x);
         }
         const playerBounds = getManualBounds(this);
+        // PLAY_AREA_WIDTH (the fixed logical board width the Matter physics
+        // and every Fruit live in), not this.scene.cameras.main.width — the
+        // camera's width is a SCREEN-space pixel count, which only happened
+        // to equal the board width back when Scale.FIT kept the canvas's
+        // logical resolution pinned at 580 forever. Under Scale.RESIZE, the
+        // camera now zooms to cover whatever the real device screen is (see
+        // MainScene's updateCameraFit()), so camera.width no longer means
+        // "board width" — this.x is a world-space coordinate and needs a
+        // world-space bound to compare against.
         const leftKey = this.keys.get('LEFT');
         if (this.leftHeld || leftKey) {
             if (
@@ -40,7 +50,7 @@ export class Player extends Phaser.GameObjects.Sprite {
                     this.scene.input.keyboard.checkDown(leftKey, 1000)) &&
                 this.x - playerBounds.width / 2 <= 0
             ) {
-                this.x = this.scene.cameras.main.width - playerBounds.width / 2;
+                this.x = PLAY_AREA_WIDTH - playerBounds.width / 2;
                 if (this.leftHeld) {
                     this.heldDelta = 1000;
                     this.scene.events.emit(
@@ -59,7 +69,7 @@ export class Player extends Phaser.GameObjects.Sprite {
             if (
                 ((this.rightHeld && this.heldDelta <= 0) ||
                     this.scene.input.keyboard.checkDown(rightKey, 1000)) &&
-                this.x + playerBounds.width / 2 >= this.scene.cameras.main.width
+                this.x + playerBounds.width / 2 >= PLAY_AREA_WIDTH
             ) {
                 this.x = playerBounds.width / 2;
                 if (this.rightHeld) {
@@ -79,8 +89,7 @@ export class Player extends Phaser.GameObjects.Sprite {
             (this.leftHeld || this.rightHeld) &&
             this.heldDelta > 0 &&
             (this.x - playerBounds.width / 2 <= 0 ||
-                this.x + playerBounds.width / 2 >=
-                    this.scene.cameras.main.width)
+                this.x + playerBounds.width / 2 >= PLAY_AREA_WIDTH)
         ) {
             this.heldDelta -= delta;
             this.scene.events.emit(
@@ -92,11 +101,8 @@ export class Player extends Phaser.GameObjects.Sprite {
 
         if (this.x - playerBounds.width / 2 < 0) {
             this.x = playerBounds.width / 2;
-        } else if (
-            this.x + playerBounds.width / 2 >
-            this.scene.cameras.main.width
-        ) {
-            this.x = this.scene.cameras.main.width - playerBounds.width / 2;
+        } else if (this.x + playerBounds.width / 2 > PLAY_AREA_WIDTH) {
+            this.x = PLAY_AREA_WIDTH - playerBounds.width / 2;
         }
     }
 

@@ -88,7 +88,15 @@ window.onload = () => {
             activePointers: 3,
         },
         scale: {
-            mode: Phaser.Scale.FIT,
+            // Migration in progress (see the written RESIZE plan) — RESIZE
+            // makes the canvas's logical resolution track #content's real
+            // size continuously instead of a fixed 580x1192 scaled via CSS,
+            // which is what let top/bottom letterbox bands show through on
+            // phones taller than that fixed ratio. Every fixed-pixel layout
+            // assumption across MainScene/HUDScene/MenuScene still needs to
+            // be migrated stage by stage before this looks right — expect
+            // stretched/misaligned content until that's done.
+            mode: Phaser.Scale.RESIZE,
             autoCenter: Phaser.Scale.CENTER_BOTH,
         },
         physics: {

@@ -94,6 +94,20 @@ html {
        serif fallback would look tonally unrelated if the font ever fails
        to load. */
     font-family: 'Fredoka', sans-serif;
+    /* Explicit viewport-anchored height — .game-wrapper/.pane/#content
+       chain below it relies on height:100% resolving all the way up to
+       the real viewport. That happened to work via an implicit browser
+       percentage-height quirk (verified empirically across several mobile
+       aspect ratios), but Phaser's Scale.RESIZE mode watches #content's
+       box size continuously (ResizeObserver), so this needs to be an
+       explicit contract, not a quirk. 100vh first as a fallback for
+       browsers without dvh support; 100dvh after so it wins when
+       supported — dvh tracks the *current* visible viewport (shrinks when
+       mobile Safari/Chrome's address bar is showing) instead of vh's
+       fixed largest-possible-viewport value, which is what actually
+       caused the top/bottom letterbox gap this migration is fixing. */
+    height: 100vh;
+    height: 100dvh;
 }
 
 body {
@@ -103,6 +117,8 @@ body {
     background-color: #12121e;
     margin: 0;
     overflow: hidden;
+    height: 100vh;
+    height: 100dvh;
 }
 
 /* Decorative backdrop for wide screens — fills the space around the fixed-width
@@ -181,36 +197,49 @@ svg {
 }
 
 /* Below the game-wrapper breakpoint (see the .game-wrapper media query
-   above), the wrapper is 100% viewport width, which means the Phaser
-   canvas itself (Scale.FIT against that same wrapper) shrinks 1:1 with
-   the viewport too — but this icon row lives in the DOM, not on canvas,
-   so its fixed-px size/position used to stay full-size while the canvas
-   (and HUDScene's "Siguiente" next-coin panel, anchored at the canvas's
-   own right edge) shrank underneath it, and on narrow phones the two
-   overlapped. `vw` sizing here mirrors that same shrink ratio: on this
-   layout 100vw of real viewport corresponds to CANVAS_WIDTH (580) canvas
-   units, so `Npx / 580 * 100` = the equivalent vw value, keeping every
-   icon (and the reserved right-hand gap) proportional to the canvas
-   instead of colliding with content anchored inside it. The 20px value
-   in the default rule above is left as-is for wider layouts (>1028px),
-   where the wrapper is only 50vw and vw-relative sizing would overshoot. */
+   above), the wrapper is 100% viewport width. This icon row lives in the
+   DOM, not on canvas, so it still needs its own rule to avoid colliding
+   with HUDScene's "Siguiente" next-coin panel — but the math changed with
+   the Phaser.Scale.RESIZE migration (see MainScene/HUDScene/MenuScene's
+   own RESIZE-migration comments): the canvas's logical resolution now
+   equals the real viewport 1:1, instead of a fixed 580-wide logical canvas
+   scaled down via CSS under Scale.FIT. That means content positioned from
+   Phaser's own live this.scale.width (like the Siguiente panel) sits a
+   CONSTANT number of real pixels from the screen edge on every device now
+   — proportional `vw` sizing for the reserved gap would be wrong today
+   (it was only correct because FIT's downscale factor was itself
+   proportional to viewport width; RESIZE has no such factor). The 20px
+   value in the default rule above is left as-is for wider layouts
+   (>1028px), where the wrapper is only 50vw and none of this applies. */
 @media (max-width: 1028px) {
     .top-menu > .icon-bar {
-        /* HUDScene's next-coin panel is 80 canvas-units wide, centered at
-           (canvas width - 40) — i.e. its left edge sits at canvas-relative
-           86.21% (500 / 580). Reserving that same 13.79vw (plus a small
-           fixed gap) keeps this row's right edge from ever reaching under
-           the panel, on any screen narrower than the breakpoint above. */
-        right: calc(13.79vw + 8px);
+        /* HUDScene's next-coin panel is 80px wide, right edge flush with
+           the canvas's real right edge (see HUDScene.ts's
+           repositionHeader(): positioned at this.scale.width - 40, radius
+           40) — so its left edge always sits exactly 80px from the real
+           screen edge, regardless of viewport width. Reserving that 80px
+           plus a small fixed gap keeps this row clear of the panel on
+           every screen narrower than the breakpoint above. */
+        right: 88px;
     }
 
+    /* Icons still need to shrink on narrow phones — reserving 88px on the
+       right plus the pause button sitting at the real screen's horizontal
+       center (see HUDScene.ts's repositionHeader()) leaves less room for
+       this row the narrower the screen gets, and that available space
+       shrinks faster than the row would on its own at a fixed icon size.
+       `vw` is the right unit again here (unlike the offset above) because
+       this needs to scale continuously with the real viewport, not stay
+       constant — just recalibrated: tuned empirically against real
+       measured overlap at common phone widths (iPhone 14 at 390, Pixel 7
+       at 412) instead of derived from the old FIT canvas math. */
     .top-menu > .icon-bar > a.link-icon {
-        margin-right: clamp(2px, 0.7vw, 4px);
+        margin-right: clamp(1px, 0.5vw, 3px);
     }
 
     .top-menu > .icon-bar > a.link-icon svg {
-        width: clamp(14px, 4.14vw, 24px);
-        height: clamp(14px, 4.14vw, 24px);
+        width: clamp(12px, 4vw, 20px);
+        height: clamp(12px, 4vw, 20px);
     }
 }
 

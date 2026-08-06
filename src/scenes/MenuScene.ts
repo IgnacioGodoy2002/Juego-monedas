@@ -1,4 +1,3 @@
-import { CANVAS_WIDTH } from '../config/boardLayout';
 import { loadBgm, getOrCreateBgm, playBgmIfNeeded } from '../managers/Bgm';
 import {
     createGoldButton,
@@ -74,6 +73,7 @@ export class MenuScene extends Phaser.Scene {
     // the case where a first-time visitor's IP-based language detection
     // resolves *while* the menu is already showing (see i18n/index.ts).
     private titleText: Phaser.GameObjects.Text;
+    private jarImage: Phaser.GameObjects.Image;
     private playButtonText: Phaser.GameObjects.Text;
     private settingsButtonText: Phaser.GameObjects.Text;
     private menuModeElements: (
@@ -99,6 +99,10 @@ export class MenuScene extends Phaser.Scene {
     )[];
 
     private boundOnLanguageChanged = this.updateTranslatedTexts.bind(this);
+    // RESIZE migration, stage 2 — placeholder only (see MainScene.ts's
+    // boundOnResize for the full rationale). this.scale is the Game-wide
+    // ScaleManager, same lifecycle concern as boundOnLanguageChanged above.
+    private boundOnResize = this.onResize.bind(this);
 
     constructor() {
         super({
@@ -123,8 +127,6 @@ export class MenuScene extends Phaser.Scene {
     }
 
     create(): void {
-        const centerX = CANVAS_WIDTH / 2;
-
         // Created here (safe — no playback yet) so it's ready the instant
         // the first button click fires; MainScene reuses this same instance
         // via getOrCreateBgm instead of creating a second one.
@@ -135,6 +137,9 @@ export class MenuScene extends Phaser.Scene {
         // through behind this scene, same as it does around the jar during
         // gameplay.
 
+        // Texture-frame setup, not a GameObject — lives game-wide on the
+        // TextureManager (outlives this scene instance), so it only needs
+        // registering once here in create(), never per resize-rebuild.
         this.textures.get('menuJar').add(
             'content',
             0,
@@ -144,15 +149,47 @@ export class MenuScene extends Phaser.Scene {
             MENU_JAR_CONTENT_HEIGHT
         );
 
-        // Width matches PLAY_AREA_WIDTH exactly — same as the real gameplay
-        // jar's NineSlice (MainScene.ts: `add.nineslice(..., PLAY_AREA_WIDTH,
-        // jarHeight, ...)`), which is CANVAS_WIDTH here (same value, see
-        // boardLayout.ts). Same scale means no visual size jump when "Jugar"
-        // hands off to MainScene. Height then just follows this asset's own
-        // aspect ratio (it's a flat illustration, not built with separate
-        // neck/base regions, so there's no real NineSlice to reuse here —
-        // uniform scaling is the closest equivalent).
-        const jarWidth = CANVAS_WIDTH;
+        this.buildContent();
+        this.showMode('menu');
+
+        // Only fires if the language actually changes *after* this scene
+        // is already showing — see boundOnLanguageChanged's own comment
+        // above. MenuScene fully restarts on every menu<->game transition
+        // (create() re-runs from scratch each time — see MainScene.ts's
+        // returnToMenu() for why), so this can't accumulate duplicate
+        // subscriptions across restarts as long as it's paired with the
+        // 'shutdown' cleanup below every time.
+        onLanguageChanged(this.boundOnLanguageChanged);
+        this.scale.on('resize', this.boundOnResize);
+        this.events.once('shutdown', () => {
+            offLanguageChanged(this.boundOnLanguageChanged);
+            this.scale.off('resize', this.boundOnResize);
+        });
+    }
+
+    // RESIZE migration, stage 5 — every position/size below cascades from
+    // this.scale.width/height (live), not the frozen CANVAS_WIDTH constant,
+    // so the whole thing is rebuilt from scratch on every resize rather
+    // than trying to reposition each piece in place. Same reasoning as
+    // HUDScene's pause overlay: GoldButton's Graphics backgrounds (the
+    // Jugar/Configuración/Volver buttons) bake their shape at absolute
+    // coordinates, so there's no in-place "move" for those anyway — and
+    // the how-to-play panel's whole layout is already cursor-based
+    // (buildHowToPlayMode), or rebuilding was going to be the shape of
+    // this regardless.
+    private buildContent(): void {
+        const centerX = this.scale.width / 2;
+
+        // Width now tracks the real screen (this.scale.width) instead of
+        // the fixed CANVAS_WIDTH (580) — matches MainScene's jar, which
+        // (via its camera's cover-zoom, see MainScene.ts's
+        // updateCameraFit()) now also visually fills the real device width.
+        // Keeping both jars sized to the same live value is what avoids a
+        // visible pop/jump in jar width the instant "Jugar" hands off to
+        // MainScene — same invariant the original fixed-580 comment here
+        // used to describe, just re-anchored to a live value instead of a
+        // frozen one.
+        const jarWidth = this.scale.width;
         const jarHeight =
             jarWidth * (MENU_JAR_CONTENT_HEIGHT / MENU_JAR_CONTENT_WIDTH);
 
@@ -184,13 +221,13 @@ export class MenuScene extends Phaser.Scene {
         const jarTop = titleY + titleFontSize * 0.6 + 20;
         const jarCenterY = jarTop + jarHeight / 2;
 
-        const jarImage = this.add.image(
+        this.jarImage = this.add.image(
             centerX,
             jarCenterY,
             'menuJar',
             'content'
         );
-        jarImage.setDisplaySize(jarWidth, jarHeight);
+        this.jarImage.setDisplaySize(jarWidth, jarHeight);
 
         this.buildMenuMode(centerX, jarTop, jarHeight);
         // Starts well past the neck (the jar is much narrower there than
@@ -200,20 +237,26 @@ export class MenuScene extends Phaser.Scene {
         // body has already widened to its full cylindrical shape, same
         // area buildMenuMode's own buttons start clearing at their 0.32.
         this.buildHowToPlayMode(centerX, jarTop + jarHeight * 0.18);
+    }
 
-        this.showMode('menu');
+    private destroyContent(): void {
+        this.titleText?.destroy();
+        this.jarImage?.destroy();
+        this.menuModeElements?.forEach((el) => el.destroy());
+        this.howToPlayModeElements?.forEach((el) => el.destroy());
+    }
 
-        // Only fires if the language actually changes *after* this scene
-        // is already showing — see boundOnLanguageChanged's own comment
-        // above. MenuScene fully restarts on every menu<->game transition
-        // (create() re-runs from scratch each time — see MainScene.ts's
-        // returnToMenu() for why), so this can't accumulate duplicate
-        // subscriptions across restarts as long as it's paired with the
-        // 'shutdown' cleanup below every time.
-        onLanguageChanged(this.boundOnLanguageChanged);
-        this.events.once('shutdown', () => {
-            offLanguageChanged(this.boundOnLanguageChanged);
-        });
+    private onResize(gameSize: Phaser.Structs.Size): void {
+        console.log('[MenuScene] resize ->', gameSize.width, gameSize.height);
+        // Preserves whichever mode ("menu" vs "howToPlay") was already
+        // showing — a live resize/orientation change while reading "Cómo
+        // jugar" shouldn't silently snap back to the main menu, same
+        // reasoning as HUDScene's pause overlay staying open across a
+        // resize.
+        const currentMode = this.mode;
+        this.destroyContent();
+        this.buildContent();
+        this.showMode(currentMode);
     }
 
     // Buttons sit inside the jar's empty glass, above the coin pile.
@@ -281,7 +324,16 @@ export class MenuScene extends Phaser.Scene {
     // every button's gradient) instead of PANEL_BG/PANEL_BORDER, which
     // stay reserved for the pause overlay and "Siguiente" panel.
     private buildHowToPlayMode(centerX: number, top: number): void {
-        const contentWidth = HOWTOPLAY_PANEL_WIDTH - HOWTOPLAY_PANEL_PADDING * 2;
+        // RESIZE migration, stage 5 — HOWTOPLAY_PANEL_WIDTH (500) was sized
+        // against the old fixed 580px canvas (~40px margin per side); on a
+        // real narrow phone that's now this.scale.width itself, 500 could
+        // overflow past the screen edge. Same 20px-per-side margin, applied
+        // to whichever is smaller.
+        const panelWidth = Math.min(
+            HOWTOPLAY_PANEL_WIDTH,
+            this.scale.width - 40
+        );
+        const contentWidth = panelWidth - HOWTOPLAY_PANEL_PADDING * 2;
         const contentLeft = centerX - contentWidth / 2;
         const elements: (
             | Phaser.GameObjects.Rectangle
@@ -294,7 +346,7 @@ export class MenuScene extends Phaser.Scene {
         const panel = this.add.rectangle(
             centerX,
             top,
-            HOWTOPLAY_PANEL_WIDTH,
+            panelWidth,
             1,
             GOLD_FILL_BOTTOM,
             0.94
@@ -464,7 +516,7 @@ export class MenuScene extends Phaser.Scene {
         // thing in the display list for this mode, so it still renders
         // behind everything above without needing setDepth.
         const panelHeight = cursorY - top;
-        panel.setSize(HOWTOPLAY_PANEL_WIDTH, panelHeight);
+        panel.setSize(panelWidth, panelHeight);
         panel.setPosition(centerX, top + panelHeight / 2);
 
         this.howToPlayModeElements = elements;
