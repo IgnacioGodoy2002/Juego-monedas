@@ -180,19 +180,6 @@ export class MenuScene extends Phaser.Scene {
     private buildContent(): void {
         const centerX = this.scale.width / 2;
 
-        // Width now tracks the real screen (this.scale.width) instead of
-        // the fixed CANVAS_WIDTH (580) — matches MainScene's jar, which
-        // (via its camera's cover-zoom, see MainScene.ts's
-        // updateCameraFit()) now also visually fills the real device width.
-        // Keeping both jars sized to the same live value is what avoids a
-        // visible pop/jump in jar width the instant "Jugar" hands off to
-        // MainScene — same invariant the original fixed-580 comment here
-        // used to describe, just re-anchored to a live value instead of a
-        // frozen one.
-        const jarWidth = this.scale.width;
-        const jarHeight =
-            jarWidth * (MENU_JAR_CONTENT_HEIGHT / MENU_JAR_CONTENT_WIDTH);
-
         // At full width the jar is tall enough (~86% of CANVAS_HEIGHT, fixed
         // by this asset's own aspect ratio) that there's very little room
         // left above it. Only the small mute/settings icons are up top —
@@ -200,6 +187,38 @@ export class MenuScene extends Phaser.Scene {
         // needs to clear that, not a whole row.
         const titleY = 60;
         const titleFontSize = 36;
+        const jarTop = titleY + titleFontSize * 0.6 + 20;
+
+        // Real-device follow-up to the RESIZE migration above: width alone
+        // (this.scale.width, uncapped) had two real bugs Chrome's device
+        // emulation never surfaced. On an actual phone, the true available
+        // *height* can be less than what a same-size Chrome viewport
+        // reports (Safari's own chrome — address bar, bottom toolbar —
+        // eats real vertical space beyond what innerHeight/dvh accounts
+        // for in practice), so a width-only-driven jarHeight could run off
+        // the bottom of the screen. And on a wide desktop window, nothing
+        // capped jarWidth at all, stretching the jar edge-to-edge instead
+        // of reading as a jar.
+        //
+        // This now fits the jar within BOTH a max width (620 — beyond that
+        // it stops reading as "a jar" and starts reading as "a stretched
+        // banner") and the real available height below the title, exactly
+        // like `object-fit: contain` would for an image: whichever
+        // constraint is tighter wins, and both dimensions shrink together
+        // so the art never distorts. On any phone narrower than 620 with
+        // enough vertical room (the common case), this is identical to the
+        // old width-only behavior — nothing changes there.
+        const MENU_JAR_MAX_WIDTH = 620;
+        const JAR_BOTTOM_MARGIN = 20;
+        const jarAspectRatio = MENU_JAR_CONTENT_HEIGHT / MENU_JAR_CONTENT_WIDTH;
+        const maxJarHeight = this.scale.height - jarTop - JAR_BOTTOM_MARGIN;
+
+        let jarWidth = Math.min(this.scale.width, MENU_JAR_MAX_WIDTH);
+        let jarHeight = jarWidth * jarAspectRatio;
+        if (jarHeight > maxJarHeight) {
+            jarHeight = maxJarHeight;
+            jarWidth = jarHeight / jarAspectRatio;
+        }
 
         // Set by showMode() below, once both modes' content exist — empty
         // here just to get the object created at the right depth/position.
@@ -218,7 +237,6 @@ export class MenuScene extends Phaser.Scene {
             })
             .setOrigin(0.5);
 
-        const jarTop = titleY + titleFontSize * 0.6 + 20;
         const jarCenterY = jarTop + jarHeight / 2;
 
         this.jarImage = this.add.image(
@@ -235,7 +253,7 @@ export class MenuScene extends Phaser.Scene {
         // panel's corners visibly stick out past the glass on both sides,
         // rather than reading as "inside" the jar) — roughly where the
         // body has already widened to its full cylindrical shape, same
-        // area buildMenuMode's own buttons start clearing at their 0.32.
+        // area buildMenuMode's own buttons start clearing at their 0.30.
         this.buildHowToPlayMode(centerX, jarTop + jarHeight * 0.18);
     }
 
@@ -264,10 +282,17 @@ export class MenuScene extends Phaser.Scene {
     // (multi-hue) pixels start showing up row-by-row — glass/neck are
     // uniformly amber, the coins are what introduce green/blue/purple/
     // silver — and it lands around 55% down the content crop. Button Ys
-    // below are comfortably above that line (jarTop + ~0.32 and ~0.41
-    // of jarHeight), clear of both the neck above and the coins below.
-    // Second button tightened from 0.45 to 0.41 — the wider gap read as
-    // too much dead air between "Jugar" and "Configuración".
+    // below are comfortably above that line (jarTop + ~0.30 and ~0.45 of
+    // jarHeight), clear of both the neck above and the coins below.
+    //
+    // Widened from an earlier 0.32/0.41 (gap 0.09) after real-device
+    // testing: that gap was tuned against jarHeight values Chrome's
+    // desktop-window device emulation produced, which ran noticeably
+    // taller than a real phone's jarHeight now does post the contain-fit
+    // sizing above (buildContent()) — at the smaller end, 0.09 of
+    // jarHeight came out *less than* BUTTON_HEIGHT itself, meaning the two
+    // buttons visually touched/overlapped instead of just sitting close.
+    // 0.15 keeps a real gap even at the smallest realistic jarHeight.
     private buildMenuMode(
         centerX: number,
         jarTop: number,
@@ -275,7 +300,7 @@ export class MenuScene extends Phaser.Scene {
     ): void {
         const playButton = this.createButton(
             centerX,
-            jarTop + jarHeight * 0.32,
+            jarTop + jarHeight * 0.3,
             t('menu.play'),
             () => {
                 playBgmIfNeeded(this.bgm);
@@ -286,7 +311,7 @@ export class MenuScene extends Phaser.Scene {
 
         const settingsButton = this.createButton(
             centerX,
-            jarTop + jarHeight * 0.41,
+            jarTop + jarHeight * 0.45,
             t('menu.settings'),
             () => {
                 playBgmIfNeeded(this.bgm);

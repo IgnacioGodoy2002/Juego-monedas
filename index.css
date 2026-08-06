@@ -259,10 +259,26 @@ svg {
 }
 
 .game-wrapper {
-    position: relative;
+    /* Anchored directly to the viewport via position:fixed instead of
+       inheriting height through html/body's 100dvh + this element's own
+       height:100%. That percentage chain depends on every ancestor being
+       correctly sized first, and real iOS Safari (viewport-fit=cover is
+       set on the <meta viewport> tag, see index.html) has had real,
+       documented bugs where 100dvh doesn't track the dynamic toolbar
+       correctly in combination with viewport-fit=cover — Chrome's device
+       emulation doesn't reproduce this, since it isn't WebKit, so this
+       couldn't be caught by CDP-based testing.
+       position:fixed's sizing comes from the browser's own viewport
+       compositor, not from any CSS height propagation, which is the
+       standard, more robust fix for this exact class of "canvas game +
+       mobile Safari dynamic toolbar" bug. inset:0 substitutes for the old
+       top:auto/height:100% — left/right still get overridden by the
+       left:50% + width + transform centering trick right below for the
+       desktop breakpoint. */
+    position: fixed;
+    inset: 0;
     left: 50%;
     width: 50vw;
-    height: 100%;
     transform: translateX(-50%);
 }
 
@@ -296,6 +312,25 @@ svg {
     height: 100%;
     width: 100%;
     transform-origin: top;
+}
+
+/* #content (the div Phaser mounts the canvas into, see game.ts's
+   `parent: 'content'`) is a flex child of .game.pane with no explicit
+   sizing rule of its own — by default a flex column item's height is
+   flex-basis:auto (shrinks to fit its content), and .pane's own
+   align-items:center means its width would default to shrink-to-fit too.
+   That leaves #content's size effectively circular: it's supposed to
+   define how big Phaser's canvas gets (Scale.RESIZE watches #content via
+   ResizeObserver), but without this rule its own size would depend on
+   whatever's already inside it. flex:1 1 auto + width:100% ties it
+   directly to .pane's box instead (which chains up to .game-wrapper's
+   fixed-to-viewport sizing above) — min-height:0 overrides the flex
+   default of min-height:auto, which otherwise can stop a flex item from
+   shrinking below its content's intrinsic size in some browsers. */
+.pane > #content {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
 }
 
 .pane h1,
