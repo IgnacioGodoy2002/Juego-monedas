@@ -16,6 +16,12 @@ import {
 
 const BUTTON_WIDTH = 280;
 const BUTTON_HEIGHT = 64;
+// Jugar/Configuración specifically read as too large on real phones — see
+// createButton()'s own comment for why only those two (not the how-to-play
+// back button, which keeps BUTTON_WIDTH/HEIGHT as-is) shrink here.
+const BUTTON_WIDTH_MOBILE = 240;
+const BUTTON_HEIGHT_MOBILE = 54;
+const BUTTON_MOBILE_BREAKPOINT = 600;
 
 // assets/img/menu_jar.png's canvas is 1600x2656 (re-extracted via rembg/
 // isnet-general-use against a dark-shelf source photo, replacing the old
@@ -40,8 +46,8 @@ const HOWTOPLAY_PANEL_WIDTH = 500;
 const HOWTOPLAY_PANEL_PADDING = 24;
 const HOWTOPLAY_SECTION_GAP = 20;
 const HOWTOPLAY_HEADER_GAP = 6;
-const HOWTOPLAY_HEADER_FONT_SIZE = '20px';
-const HOWTOPLAY_TEXT_FONT_SIZE = '17px';
+const HOWTOPLAY_HEADER_FONT_SIZE = 20;
+const HOWTOPLAY_TEXT_FONT_SIZE = 17;
 const HOWTOPLAY_HEADER_DOT_RADIUS = 4;
 const HOWTOPLAY_COIN_SIZE = 62;
 const HOWTOPLAY_COIN_COLS = 4;
@@ -281,26 +287,37 @@ export class MenuScene extends Phaser.Scene {
     // Found that boundary by scanning menu_jar.png for where saturated
     // (multi-hue) pixels start showing up row-by-row — glass/neck are
     // uniformly amber, the coins are what introduce green/blue/purple/
-    // silver — and it lands around 55% down the content crop. Button Ys
-    // below are comfortably above that line (jarTop + ~0.30 and ~0.45 of
-    // jarHeight), clear of both the neck above and the coins below.
+    // silver — and it lands around 55% down the content crop. Play sits at
+    // jarTop + 0.30 of jarHeight, comfortably clear of the neck above.
     //
-    // Widened from an earlier 0.32/0.41 (gap 0.09) after real-device
-    // testing: that gap was tuned against jarHeight values Chrome's
-    // desktop-window device emulation produced, which ran noticeably
-    // taller than a real phone's jarHeight now does post the contain-fit
-    // sizing above (buildContent()) — at the smaller end, 0.09 of
-    // jarHeight came out *less than* BUTTON_HEIGHT itself, meaning the two
-    // buttons visually touched/overlapped instead of just sitting close.
-    // 0.15 keeps a real gap even at the smallest realistic jarHeight.
+    // Settings used to sit at another jarHeight *fraction* (tried 0.41,
+    // then 0.45) — but jarHeight itself now varies a lot more than either
+    // of those were tuned against: it's whatever fits post the contain-fit
+    // sizing in buildContent() (small on a phone, capped at a 620-wide
+    // jar's own height on desktop). A fraction that looked right on one
+    // real jarHeight came out either overlapping (mobile) or with way too
+    // much dead air (desktop) on the other. A fixed real-pixel gap below
+    // Play's own bottom edge stays consistent regardless of jarHeight —
+    // BUTTON_GAP is chosen to read as a clear, deliberate gap without
+    // reading as empty space, and works out comfortably above the ~55%
+    // coin-pile line on every jarHeight this has been checked against.
     private buildMenuMode(
         centerX: number,
         jarTop: number,
         jarHeight: number
     ): void {
+        const BUTTON_GAP = 24;
+        const isMobile = this.scale.width < BUTTON_MOBILE_BREAKPOINT;
+        const buttonHeight = isMobile
+            ? BUTTON_HEIGHT_MOBILE
+            : BUTTON_HEIGHT;
+
+        const playButtonY = jarTop + jarHeight * 0.3;
+        const settingsButtonY = playButtonY + buttonHeight + BUTTON_GAP;
+
         const playButton = this.createButton(
             centerX,
-            jarTop + jarHeight * 0.3,
+            playButtonY,
             t('menu.play'),
             () => {
                 playBgmIfNeeded(this.bgm);
@@ -311,7 +328,7 @@ export class MenuScene extends Phaser.Scene {
 
         const settingsButton = this.createButton(
             centerX,
-            jarTop + jarHeight * 0.45,
+            settingsButtonY,
             t('menu.settings'),
             () => {
                 playBgmIfNeeded(this.bgm);
@@ -358,7 +375,39 @@ export class MenuScene extends Phaser.Scene {
             HOWTOPLAY_PANEL_WIDTH,
             this.scale.width - 40
         );
-        const contentWidth = panelWidth - HOWTOPLAY_PANEL_PADDING * 2;
+
+        // Real-phone follow-up: capping panelWidth (above) wasn't enough —
+        // the panel's *height* was never bounded at all, purely additive
+        // from however much content/gaps/font-size the 5 sections need, so
+        // on a real phone it ran well past the bottom of the screen with
+        // "Volver al menú" pushed off entirely. Measured against an iPhone
+        // 14-sized viewport: natural height ~772px against ~845px of real
+        // screen height total (and this panel doesn't start at y=0 — the
+        // title/jar-neck above it eats a good chunk first) — meaning it
+        // needs to shrink to roughly 3/4 size to comfortably fit with the
+        // back button visible. Scaling every size constant below by the
+        // same factor keeps the panel internally proportional instead of
+        // shrinking one thing (say, just the font) and leaving the rest
+        // fixed. Desktop (isMobile false) is untouched — this panel already
+        // fits comfortably there.
+        const isMobile = this.scale.width < BUTTON_MOBILE_BREAKPOINT;
+        const compactScale = isMobile ? 0.72 : 1;
+        const panelPadding = HOWTOPLAY_PANEL_PADDING * compactScale;
+        const sectionGap = HOWTOPLAY_SECTION_GAP * compactScale;
+        const headerGap = HOWTOPLAY_HEADER_GAP * compactScale;
+        const headerFontSize = `${Math.round(
+            HOWTOPLAY_HEADER_FONT_SIZE * compactScale
+        )}px`;
+        const textFontSize = `${Math.round(
+            HOWTOPLAY_TEXT_FONT_SIZE * compactScale
+        )}px`;
+        const headerDotRadius = HOWTOPLAY_HEADER_DOT_RADIUS * compactScale;
+        const coinSize = HOWTOPLAY_COIN_SIZE * compactScale;
+        const coinGap = HOWTOPLAY_COIN_GAP * compactScale;
+        const backButtonWidth = BUTTON_WIDTH * compactScale;
+        const backButtonHeight = BUTTON_HEIGHT * compactScale;
+
+        const contentWidth = panelWidth - panelPadding * 2;
         const contentLeft = centerX - contentWidth / 2;
         const elements: (
             | Phaser.GameObjects.Rectangle
@@ -379,7 +428,7 @@ export class MenuScene extends Phaser.Scene {
         panel.setStrokeStyle(2, GOLD_BORDER, 1);
         elements.push(panel);
 
-        let cursorY = top + HOWTOPLAY_PANEL_PADDING;
+        let cursorY = top + panelPadding;
 
         // Small dot-accent + bold label, same "section header" pattern the
         // wireframe used for all five sections — kept as a local closure
@@ -387,27 +436,27 @@ export class MenuScene extends Phaser.Scene {
         // this call's `elements` array and advance the shared cursor.
         const addSectionHeading = (label: string): Phaser.GameObjects.Text => {
             const dot = this.add.circle(
-                contentLeft + HOWTOPLAY_HEADER_DOT_RADIUS,
+                contentLeft + headerDotRadius,
                 cursorY + 12,
-                HOWTOPLAY_HEADER_DOT_RADIUS,
+                headerDotRadius,
                 GOLD_FILL_TOP
             );
             elements.push(dot);
 
             const heading = this.add.text(
-                contentLeft + HOWTOPLAY_HEADER_DOT_RADIUS * 2 + 8,
+                contentLeft + headerDotRadius * 2 + 8,
                 cursorY,
                 label,
                 {
                     fontFamily: GAME_FONT_FAMILY,
                     fontStyle: 'bold',
-                    fontSize: HOWTOPLAY_HEADER_FONT_SIZE,
+                    fontSize: headerFontSize,
                     color: GOLD_TEXT_COLOR,
                 }
             );
             heading.setOrigin(0, 0);
             elements.push(heading);
-            cursorY += heading.height + HOWTOPLAY_HEADER_GAP;
+            cursorY += heading.height + headerGap;
             return heading;
         };
 
@@ -418,13 +467,13 @@ export class MenuScene extends Phaser.Scene {
         const addBodyText = (label: string): Phaser.GameObjects.Text => {
             const body = this.add.text(contentLeft, cursorY, label, {
                 fontFamily: GAME_FONT_FAMILY,
-                fontSize: HOWTOPLAY_TEXT_FONT_SIZE,
+                fontSize: textFontSize,
                 color: GOLD_TEXT_COLOR,
                 wordWrap: { width: contentWidth },
             });
             body.setOrigin(0, 0);
             elements.push(body);
-            cursorY += body.height + HOWTOPLAY_SECTION_GAP;
+            cursorY += body.height + sectionGap;
             return body;
         };
 
@@ -438,7 +487,7 @@ export class MenuScene extends Phaser.Scene {
                 0.5
             );
             elements.push(divider);
-            cursorY += HOWTOPLAY_SECTION_GAP;
+            cursorY += sectionGap;
         };
 
         // --- Objetivo ---
@@ -471,28 +520,28 @@ export class MenuScene extends Phaser.Scene {
         // still in es/pt/en.json, just no longer rendered anywhere.
         const tierCount = OrbTier.Supernova - OrbTier.Chispa + 1;
         const rows = Math.ceil(tierCount / HOWTOPLAY_COIN_COLS);
-        const cellSize = HOWTOPLAY_COIN_SIZE + HOWTOPLAY_COIN_GAP;
-        const gridWidth = HOWTOPLAY_COIN_COLS * cellSize - HOWTOPLAY_COIN_GAP;
-        const gridLeft = centerX - gridWidth / 2 + HOWTOPLAY_COIN_SIZE / 2;
+        const cellSize = coinSize + coinGap;
+        const gridWidth = HOWTOPLAY_COIN_COLS * cellSize - coinGap;
+        const gridLeft = centerX - gridWidth / 2 + coinSize / 2;
 
         for (let tier = OrbTier.Chispa; tier <= OrbTier.Supernova; tier++) {
             const col = tier % HOWTOPLAY_COIN_COLS;
             const row = Math.floor(tier / HOWTOPLAY_COIN_COLS);
             const icon = this.add.image(
                 gridLeft + col * cellSize,
-                cursorY + HOWTOPLAY_COIN_SIZE / 2 + row * cellSize,
+                cursorY + coinSize / 2 + row * cellSize,
                 `howToPlayCoin${tier}`
             );
-            // Cell layout (position/spacing) stays fixed at HOWTOPLAY_COIN_SIZE
-            // for all 12 — only the per-icon display size is adjusted, so the
+            // Cell layout (position/spacing) stays fixed at coinSize for all
+            // 12 — only the per-icon display size is adjusted, so the
             // *opaque coin*, not just its canvas, ends up visually uniform.
             const iconSize =
-                (HOWTOPLAY_COIN_SIZE * HOWTOPLAY_COIN_REFERENCE_FRACTION) /
+                (coinSize * HOWTOPLAY_COIN_REFERENCE_FRACTION) /
                 ORB_TIER_HITBOX_FRACTIONS[tier as OrbTier];
             icon.setDisplaySize(iconSize, iconSize);
             elements.push(icon);
         }
-        cursorY += rows * cellSize - HOWTOPLAY_COIN_GAP + HOWTOPLAY_SECTION_GAP;
+        cursorY += rows * cellSize - coinGap + sectionGap;
 
         addDivider();
 
@@ -509,16 +558,16 @@ export class MenuScene extends Phaser.Scene {
             {
                 fontFamily: GAME_FONT_FAMILY,
                 fontStyle: 'bold',
-                fontSize: HOWTOPLAY_TEXT_FONT_SIZE,
+                fontSize: textFontSize,
                 color: '#fff5d6',
                 align: 'center',
             }
         );
         this.howToPlayGoodLuckText.setOrigin(0.5, 0);
         elements.push(this.howToPlayGoodLuckText);
-        cursorY += this.howToPlayGoodLuckText.height + HOWTOPLAY_SECTION_GAP;
+        cursorY += this.howToPlayGoodLuckText.height + sectionGap;
 
-        const backButtonY = cursorY + BUTTON_HEIGHT / 2;
+        const backButtonY = cursorY + backButtonHeight / 2;
         // Reuses pause.backToMenu ("Volver al menú") rather than inventing
         // a new key — same destination, same action, from the player's
         // perspective there's no reason for it to say anything different.
@@ -526,15 +575,15 @@ export class MenuScene extends Phaser.Scene {
             this,
             centerX,
             backButtonY,
-            BUTTON_WIDTH,
-            BUTTON_HEIGHT,
+            backButtonWidth,
+            backButtonHeight,
             t('pause.backToMenu'),
-            '24px',
+            isMobile ? '20px' : '24px',
             () => this.showMode('menu')
         );
         this.howToPlayBackButtonText = backButton[1];
         elements.push(...backButton);
-        cursorY = backButtonY + BUTTON_HEIGHT / 2 + HOWTOPLAY_PANEL_PADDING;
+        cursorY = backButtonY + backButtonHeight / 2 + panelPadding;
 
         // Now that the real extent is known, size/reposition the
         // placeholder created at the top of this method — still the first
@@ -591,18 +640,32 @@ export class MenuScene extends Phaser.Scene {
         this.howToPlayBackButtonText.setText(t('pause.backToMenu'));
     }
 
+    // Only used for Jugar/Configuración (see buildMenuMode) — the
+    // how-to-play back button calls createGoldButton directly with the
+    // unscaled BUTTON_WIDTH/HEIGHT, unaffected by this. Real-phone testing
+    // showed these two reading as oversized against the rest of the mobile
+    // menu (title, jar, coin pile) even though nothing was numerically
+    // "wrong" — they're sized fine relative to jarWidth/jarHeight, just big
+    // in absolute terms on a small screen. A simple width breakpoint
+    // (rather than a continuous formula, unlike the HUD font-size fix)
+    // since the ask here was specifically "a little smaller on mobile,
+    // untouched on desktop" — not a value that needs to track the exact
+    // real width continuously.
     private createButton(
         x: number,
         y: number,
         label: string,
         onClick: () => void
     ): [Phaser.GameObjects.Graphics, Phaser.GameObjects.Text] {
+        const isMobile = this.scale.width < BUTTON_MOBILE_BREAKPOINT;
+        const width = isMobile ? BUTTON_WIDTH_MOBILE : BUTTON_WIDTH;
+        const height = isMobile ? BUTTON_HEIGHT_MOBILE : BUTTON_HEIGHT;
         return createGoldButton(
             this,
             x,
             y,
-            BUTTON_WIDTH,
-            BUTTON_HEIGHT,
+            width,
+            height,
             label,
             '28px',
             onClick

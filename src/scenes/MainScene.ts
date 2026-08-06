@@ -697,20 +697,37 @@ export class MainScene extends Phaser.Scene {
     // gracefully, and every coin's ORB_TIER_SCALES/hitbox fraction this
     // session was tuned against this exact fixed board.
     //
-    // Instead the CAMERA zooms/centers to "cover" whatever the real canvas
-    // is: zoom = the LARGER of (real width / design width, real height /
-    // design height) — the opposite of Scale.FIT's `min`, which is what
-    // produced the letterbox bars this whole migration exists to remove.
-    // The fixed board always fills the screen with no visible background
-    // gap, at the cost of cropping a sliver off the left/right or top/
-    // bottom edges (the jar glass — full-bleed background art already, not
-    // gameplay-critical content) on aspect ratios that don't match the
-    // design 580:1192 exactly.
+    // Instead the CAMERA zooms/centers to fill the screen vertically —
+    // zoom = real height / design height (1192) — which guarantees zero
+    // top/bottom gap on *any* screen, since the full logical height always
+    // maps to the full real height, unconditionally.
+    //
+    // This used to be Math.max(width-ratio, height-ratio) — "cover" the
+    // whole screen, cropping whichever axis overshoots — which is right
+    // for a *portrait* container (real width/height < the 580:1192 design
+    // ratio, true on every phone tested): there the height-ratio already
+    // wins the max() on its own, so this fixed-height-only formula changes
+    // nothing on mobile. But on desktop, .game-wrapper is deliberately
+    // capped to 50vw (see index.css) while staying full *height* — that
+    // container is far wider relative to its height than the design ratio,
+    // so the old max() picked the WIDTH ratio there instead, zooming in
+    // hard enough to crop most of the board's vertical extent (including
+    // the header) off-screen. Dropping the width term restores the old
+    // Scale.FIT look on desktop (the board fits inside the container with
+    // natural left/right margins, same as before this migration), while
+    // leaving mobile exactly as it already was.
+    //
+    // CAMERA_ZOOM_MARGIN shrinks that a little further (a small intentional
+    // margin, not the old unbounded gap this migration removed) — mobile
+    // in particular had the jar's neck sitting right against the header
+    // with zero breathing room, since HEADER_HEIGHT was tuned assuming a
+    // ~580px-wide reference screen (zoom≈1); on anything narrower the
+    // margin shrinks proportionally along with everything else. This adds
+    // a bit of it back, on every screen size, uniformly.
     private updateCameraFit(): void {
-        const zoom = Math.max(
-            this.scale.width / CANVAS_WIDTH,
-            this.scale.height / CANVAS_HEIGHT
-        );
+        const CAMERA_ZOOM_MARGIN = 0.94;
+        const zoom =
+            (this.scale.height / CANVAS_HEIGHT) * CAMERA_ZOOM_MARGIN;
         this.cameras.main.setZoom(zoom);
         this.cameras.main.centerOn(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     }
