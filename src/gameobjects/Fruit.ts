@@ -98,11 +98,17 @@ export const ORB_TIER_SCALES: Record<OrbTier, number> = {
     [OrbTier.Esmeralda]: 0.2512, // tier 7, unchanged: 216.0 / 860
     [OrbTier.Reina]: 0.2763, // tier 8 now: 237.6 / 860
     [OrbTier.Zafiro]: 0.3014, // tier 9 now: 259.2 / 860
-    // Re-measured during the HiDPI sharpness diagnosis: 7_diamante.png is
-    // actually 320x320, not 340x340 as this comment previously assumed
-    // (stale since whenever the file was last replaced) — corrected to
-    // 280.8 / 320.
-    [OrbTier.OrbeSolar]: 0.8775, // tier 10: 280.8 / 320
+    // 280.8/320 (0.8775, the formula-driven value corrected during the
+    // HiDPI sharpness diagnosis for the 320x320-not-340x340 file size)
+    // made diamante's *visible* disc (diameter * ORB_TIER_HITBOX_FRACTIONS)
+    // land at ~271px — practically identical to Supernova's ~270px, since
+    // diamante's opaque-content fraction (0.9656) is much higher than
+    // Supernova's (0.8938) and made up the gap almost exactly. Diamante is
+    // supposed to read as clearly smaller than GG. Re-picked instead to
+    // land the visible diameter at ~225px — between Zafiro's ~203px and
+    // Supernova's ~270px, noticeably closer to Zafiro's end: 225 / 0.9656
+    // (hitbox fraction) / 320 (native width) = 0.7282.
+    [OrbTier.OrbeSolar]: 0.7282, // tier 10: visible disc ~225px, between Zafiro (~203px) and Supernova (~270px)
     // Supernova moved from tier 7 to tier 11 when Esmeralda/Zafiro/Platino/
     // Reina were inserted, so its target diameter grows too (still the same
     // formula, just a bigger tier number): 2.7 * (24 + 11*8) = 302.4.
