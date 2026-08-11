@@ -12,7 +12,8 @@
         "win": "¡Llegaste al Supernova! ¡Genial!\n¡Seguí así!",
         "chainReaction": "¡Reacción en cadena! +{{points}} puntos",
         "tapToPlay": "Tocá para soltar una moneda",
-        "next": "Siguiente"
+        "next": "Siguiente",
+        "playAgain": "Jugar de nuevo"
     },
     "pause": {
         "title": "Pausa",

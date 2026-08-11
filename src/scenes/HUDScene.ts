@@ -13,6 +13,7 @@ import {
     PANEL_BORDER,
 } from '../ui/GoldButton';
 import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
+import { applyUniformDPRCameraFit, applyDPRToAllText } from '../util/HiDPI';
 
 const GAME_OVER_SCREEN_OFFSET: number = -200;
 const NEXT_ORB_PREVIEW_SIZE: number = 64;
@@ -23,6 +24,12 @@ const PAUSE_PANEL_WIDTH = 320;
 const PAUSE_PANEL_HEIGHT = 230;
 const PAUSE_BUTTON_WIDTH = 240;
 const PAUSE_BUTTON_HEIGHT = 56;
+
+// Same width as the pause panel (same visual family), taller — title +
+// score + conditional "new record" line + 2 buttons is more content than
+// pause's title + 2 buttons.
+const GAME_OVER_PANEL_WIDTH = PAUSE_PANEL_WIDTH;
+const GAME_OVER_PANEL_HEIGHT = 360;
 
 // "Luxury watch face" styling for the score/record readout: normal
 // (non-bold) weight, dark bronze — reads as a label printed directly on
@@ -74,8 +81,6 @@ export class HUDScene extends Phaser.Scene {
     private score: number;
     private highscore: number = 0;
 
-    private gameOverText: Phaser.GameObjects.Text;
-    private beatHighscoreText: Phaser.GameObjects.Text;
     private winText: Phaser.GameObjects.Text;
     private instructionText: Phaser.GameObjects.Text;
     private fingerIcon: Phaser.GameObjects.Image;
@@ -98,6 +103,17 @@ export class HUDScene extends Phaser.Scene {
     private pauseTitleText: Phaser.GameObjects.Text;
     private pauseResumeButtonText: Phaser.GameObjects.Text;
     private pauseMenuButtonText: Phaser.GameObjects.Text;
+
+    private gameOverOverlayElements: (
+        | Phaser.GameObjects.Rectangle
+        | Phaser.GameObjects.Graphics
+        | Phaser.GameObjects.Text
+    )[];
+    private gameOverTitleText: Phaser.GameObjects.Text;
+    private gameOverScoreText: Phaser.GameObjects.Text;
+    private gameOverRecordText: Phaser.GameObjects.Text;
+    private gameOverPlayAgainButtonText: Phaser.GameObjects.Text;
+    private gameOverMenuButtonText: Phaser.GameObjects.Text;
 
     // Same reasoning as MainScene.ts's boundOnControlsChange — this.game.
     // events is global and outlives this scene, so the exact function
@@ -135,20 +151,35 @@ export class HUDScene extends Phaser.Scene {
             withLetterSpacing(t('hud.score')),
             { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
         );
-        this.scoreText = this.add.text(
-            120,
-            10,
-            withLetterSpacing('0'),
-            { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
-        );
         this.highScoreLabelText = this.add.text(
             10,
             30,
             withLetterSpacing(t('hud.highScore')),
             { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
         );
+        // Value X used to be a bare fixed 120 — with fontSize now scaling
+        // continuously with the real screen (scoreFontSize above), the
+        // label's own rendered width varies a lot (an 11px "Puntaje:" is
+        // much narrower than a 20px one), so a fixed gap read as either too
+        // tight or, on the small end, like the label and its number
+        // belonged to two different rows. Deriving it from each label's
+        // own measured width — the wider of the two, so both numbers still
+        // line up in a column — keeps a real, proportional gap instead.
+        const scoreValueX =
+            Math.max(
+                this.scoreLabelText.width,
+                this.highScoreLabelText.width
+            ) +
+            10 +
+            8;
+        this.scoreText = this.add.text(
+            scoreValueX,
+            10,
+            withLetterSpacing('0'),
+            { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
+        );
         this.highscoreText = this.add.text(
-            120,
+            scoreValueX,
             30,
             withLetterSpacing('0'),
             { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
@@ -184,6 +215,13 @@ export class HUDScene extends Phaser.Scene {
 
         this.game.events.on('controlsChange', this.boundOnControlsChange);
         this.scale.on('resize', this.boundOnResize);
+        // The very first 'resize' event of the whole session fires during
+        // Phaser's own boot, before this scene has registered the listener
+        // above — so without this explicit call the camera would stay at
+        // zoom=1 (Phaser's default) until the next actual window resize,
+        // which may never happen. Same reasoning as MainScene calling
+        // updateCameraFit() directly in its own create().
+        applyUniformDPRCameraFit(this);
 
         // Mirrors DebugScene.ts's own 'shutdown' listener pattern (see its
         // create()) — same idea, applied to the one thing *this* scene
@@ -199,20 +237,6 @@ export class HUDScene extends Phaser.Scene {
 
         // Same implicit-16px story as scoreFontSize above.
         const messageFontSize = this.scaledFontSize(16, 11, 22);
-        this.gameOverText = this.add.text(
-            this.scale.width / 4,
-            PLAY_AREA_CENTER_Y + GAME_OVER_SCREEN_OFFSET,
-            t('hud.gameOver'),
-            { fontFamily: GAME_FONT_FAMILY, fontSize: `${messageFontSize}px` }
-        );
-        this.gameOverText.setVisible(false);
-        this.beatHighscoreText = this.add.text(
-            this.scale.width / 4,
-            PLAY_AREA_CENTER_Y + 50 + GAME_OVER_SCREEN_OFFSET,
-            t('hud.newRecord'),
-            { fontFamily: GAME_FONT_FAMILY, fontSize: `${messageFontSize}px` }
-        );
-        this.beatHighscoreText.setVisible(false);
         this.winText = this.add.text(
             this.scale.width / 4,
             PLAY_AREA_CENTER_Y + GAME_OVER_SCREEN_OFFSET,
@@ -385,12 +409,21 @@ export class HUDScene extends Phaser.Scene {
         this.buildPauseOverlay();
         this.showPauseOverlay(false);
 
+        this.buildGameOverOverlay();
+        this.showGameOverOverlay(false);
+
         onLanguageChanged(this.boundOnLanguageChanged);
         this.events.once('shutdown', () => {
             offLanguageChanged(this.boundOnLanguageChanged);
         });
 
         this.scene.bringToTop();
+
+        // Last line of create() on purpose — every Text object this scene
+        // creates (score/record, pause overlay, game-over overlay, etc.)
+        // exists by this point; applyUniformDPRCameraFit() above ran
+        // earlier and only touches the camera, not text resolution.
+        applyDPRToAllText(this);
     }
 
     // Repaints every translated Text object in place — covers the case
@@ -401,8 +434,6 @@ export class HUDScene extends Phaser.Scene {
     private updateTranslatedTexts(): void {
         this.scoreLabelText.setText(withLetterSpacing(t('hud.score')));
         this.highScoreLabelText.setText(withLetterSpacing(t('hud.highScore')));
-        this.gameOverText.setText(t('hud.gameOver'));
-        this.beatHighscoreText.setText(t('hud.newRecord'));
         this.winText.setText(t('hud.win'));
         this.chainReactionText.setText(
             t('hud.chainReaction', { points: SUPERNOVA_CHAIN_BONUS })
@@ -412,6 +443,16 @@ export class HUDScene extends Phaser.Scene {
         this.pauseTitleText.setText(t('pause.title'));
         this.pauseResumeButtonText.setText(t('pause.resume'));
         this.pauseMenuButtonText.setText(t('pause.backToMenu'));
+        this.gameOverTitleText.setText(t('hud.gameOver'));
+        this.gameOverRecordText.setText(t('hud.newRecord'));
+        this.gameOverPlayAgainButtonText.setText(t('hud.playAgain'));
+        this.gameOverMenuButtonText.setText(t('pause.backToMenu'));
+        // gameOverScoreText intentionally not touched here — it holds a
+        // formatted "Puntaje: N" string built in gameOver() itself, not a
+        // pure t() lookup; a language change while it's on-screen leaves
+        // just that label word stale until the next loss, an accepted
+        // edge case (same tradeoff howToPlay's own panel text already
+        // makes for a language change mid-display).
     }
 
     updateScore(): void {
@@ -426,19 +467,34 @@ export class HUDScene extends Phaser.Scene {
 
     update(time: number, delta: number): void {}
 
+    // Used to immediately clear the board and quietly go back to the
+    // "tap to play" state — no acknowledgement the player had actually
+    // lost, and nothing stopping an idle tap from silently starting a new
+    // round. Now: pause MainScene (frozen, still visible underneath, same
+    // as the manual pause overlay) and show a real modal with the final
+    // score, requiring an explicit "Jugar de nuevo" or "Volver al menú"
+    // before anything about the board changes — see buildGameOverOverlay().
     gameOver(): void {
-        this.gameOverText.setVisible(true);
-        if (this.registry.get('beatHighscore')) {
-            this.beatHighscoreText.setVisible(true);
-        }
         if (this.registry.get('highscore')) {
             this.highscore = this.registry.get('highscore');
             this.highscoreText.setText(
                 withLetterSpacing(this.highscore.toString())
             );
         }
-        this.instructionText.setVisible(true);
-        this.fingerIcon.setVisible(true);
+        this.gameOverScoreText.setText(
+            `${t('hud.score')} ${this.registry.get('score')}`
+        );
+        this.showGameOverOverlay(true);
+        // showGameOverOverlay(true) just made every element in the array
+        // visible, record text included — override it back off when this
+        // particular loss didn't actually beat the high score.
+        this.gameOverRecordText.setVisible(
+            !!this.registry.get('beatHighscore')
+        );
+        // Same reasoning as openPauseOverlay(): stacking the pause overlay
+        // on top of this one via the still-live pause icon would be a mess.
+        this.pauseIcon.disableInteractive();
+        this.scene.pause('MainScene');
     }
 
     onGameInit(): void {
@@ -453,8 +509,6 @@ export class HUDScene extends Phaser.Scene {
     onGameStarted(): void {
         this.instructionText.setVisible(false);
         this.fingerIcon.setVisible(false);
-        this.gameOverText.setVisible(false);
-        this.beatHighscoreText.setVisible(false);
     }
 
     onTap(): void {
@@ -485,10 +539,17 @@ export class HUDScene extends Phaser.Scene {
 
     private onResize(gameSize: Phaser.Structs.Size): void {
         console.log('[HUDScene] resize ->', gameSize.width, gameSize.height);
+        applyUniformDPRCameraFit(this);
         this.repositionHeader();
         this.rebuildPauseOverlayPreservingVisibility();
+        this.rebuildGameOverOverlayPreservingVisibility();
         this.repositionTransientTexts();
         this.rescaleFreeFloatingTextFontSizes();
+        // Last, after every rebuild above (pause/game-over overlays
+        // destroy and recreate their Text objects on resize) — sweeps
+        // whatever Text instances currently exist rather than only the
+        // ones present when this function started.
+        applyDPRToAllText(this);
     }
 
     // Re-derives a fontSize from the live this.scale.width against the
@@ -516,26 +577,38 @@ export class HUDScene extends Phaser.Scene {
         this.scoreText.setFontSize(scoreFontSize);
         this.highScoreLabelText.setFontSize(scoreFontSize);
         this.highscoreText.setFontSize(scoreFontSize);
+        // Label width changes with fontSize — re-derive the value column's
+        // X the same way create() first computed it, or a resize would
+        // leave the numbers at their old (now wrong) offset.
+        const scoreValueX =
+            Math.max(
+                this.scoreLabelText.width,
+                this.highScoreLabelText.width
+            ) +
+            10 +
+            8;
+        this.scoreText.setX(scoreValueX);
+        this.highscoreText.setX(scoreValueX);
 
         const messageFontSize = this.scaledFontSize(16, 11, 22);
-        this.gameOverText.setFontSize(messageFontSize);
-        this.beatHighscoreText.setFontSize(messageFontSize);
         this.winText.setFontSize(messageFontSize);
         this.chainReactionText.setFontSize(messageFontSize);
 
         this.instructionText.setFontSize(this.scaledFontSize(24, 16, 30));
     }
 
-    // RESIZE migration, stage 4, block 3 — game-over/win/instruction texts
-    // are hidden almost all the time (setVisible(false) at creation, only
-    // shown on specific game-state events), but a resize can still happen
-    // while one is up (rotating the device on the game-over screen), so
-    // this needs the same live re-derive as the always-visible header. Only
-    // the X axis moves — the Y anchors (PLAY_AREA_CENTER_Y-based) are a
-    // separate, pre-existing design decision this stage doesn't touch.
+    // RESIZE migration, stage 4, block 3 — win/instruction texts are hidden
+    // almost all the time (setVisible(false) at creation, only shown on
+    // specific game-state events), but a resize can still happen while one
+    // is up (rotating the device mid-chain-reaction), so this needs the
+    // same live re-derive as the always-visible header. Only the X axis
+    // moves — the Y anchors (PLAY_AREA_CENTER_Y-based) are a separate,
+    // pre-existing design decision this stage doesn't touch. Game-over's
+    // own texts don't need an entry here — they live inside the game-over
+    // overlay's panel now, rebuilt from scratch on resize (see
+    // rebuildGameOverOverlayPreservingVisibility()) rather than repositioned
+    // in place.
     private repositionTransientTexts(): void {
-        this.gameOverText.x = this.scale.width / 4;
-        this.beatHighscoreText.x = this.scale.width / 4;
         this.winText.x = this.scale.width / 4;
         this.instructionText.x = this.scale.width / 2;
         this.fingerIcon.x = this.scale.width / 2;
@@ -606,14 +679,14 @@ export class HUDScene extends Phaser.Scene {
         });
         this.pauseTitleText.setOrigin(0.5);
 
-        const resumeButton = this.createPauseOverlayButton(
+        const resumeButton = this.createOverlayButton(
             centerX,
             centerY - 10,
             t('pause.resume'),
             () => this.closePauseOverlay()
         );
         this.pauseResumeButtonText = resumeButton[1];
-        const menuButton = this.createPauseOverlayButton(
+        const menuButton = this.createOverlayButton(
             centerX,
             centerY + 60,
             t('pause.backToMenu'),
@@ -642,6 +715,118 @@ export class HUDScene extends Phaser.Scene {
         this.showPauseOverlay(wasVisible);
     }
 
+    // Same Graphics-bakes-absolute-coordinates reasoning as the pause
+    // overlay above (see destroyPauseOverlay()'s comment) — full
+    // destroy+rebuild on resize rather than in-place repositioning.
+    private destroyGameOverOverlay(): void {
+        if (this.gameOverOverlayElements) {
+            this.gameOverOverlayElements.forEach((el) => el.destroy());
+        }
+    }
+
+    private buildGameOverOverlay(): void {
+        const centerX = this.scale.width / 2;
+        const centerY = this.scale.height / 2;
+
+        const backdrop = this.add.rectangle(
+            centerX,
+            centerY,
+            this.scale.width,
+            this.scale.height,
+            0x000000,
+            PAUSE_OVERLAY_BACKDROP_ALPHA
+        );
+        backdrop.setInteractive();
+
+        const panel = this.add.rectangle(
+            centerX,
+            centerY,
+            GAME_OVER_PANEL_WIDTH,
+            GAME_OVER_PANEL_HEIGHT,
+            PANEL_BG
+        );
+        panel.setStrokeStyle(2, PANEL_BORDER, 0.9);
+
+        this.gameOverTitleText = this.add.text(
+            centerX,
+            centerY - 140,
+            t('hud.gameOver'),
+            {
+                fontFamily: GAME_FONT_FAMILY,
+                fontStyle: 'bold',
+                fontSize: '28px',
+                color: '#f3e2bc',
+            }
+        );
+        this.gameOverTitleText.setOrigin(0.5);
+
+        // Actual text content set in gameOver() itself (needs the live
+        // score) — this placeholder just establishes the object/position.
+        this.gameOverScoreText = this.add.text(centerX, centerY - 85, '', {
+            fontFamily: GAME_FONT_FAMILY,
+            fontSize: '20px',
+            color: '#e8cfa3',
+        });
+        this.gameOverScoreText.setOrigin(0.5);
+
+        this.gameOverRecordText = this.add.text(
+            centerX,
+            centerY - 50,
+            t('hud.newRecord'),
+            {
+                fontFamily: GAME_FONT_FAMILY,
+                fontStyle: 'bold',
+                fontSize: '18px',
+                color: '#ffe9b3',
+            }
+        );
+        this.gameOverRecordText.setOrigin(0.5);
+
+        const playAgainButton = this.createOverlayButton(
+            centerX,
+            centerY + 20,
+            t('hud.playAgain'),
+            () => this.playAgainFromGameOver()
+        );
+        this.gameOverPlayAgainButtonText = playAgainButton[1];
+        const menuButton = this.createOverlayButton(
+            centerX,
+            centerY + 90,
+            t('pause.backToMenu'),
+            () => this.returnToMenu()
+        );
+        this.gameOverMenuButtonText = menuButton[1];
+
+        this.gameOverOverlayElements = [
+            backdrop,
+            panel,
+            this.gameOverTitleText,
+            this.gameOverScoreText,
+            this.gameOverRecordText,
+            ...playAgainButton,
+            ...menuButton,
+        ];
+    }
+
+    // Mirrors rebuildPauseOverlayPreservingVisibility() — plus this
+    // overlay has two extra pieces of state a plain visibility flag
+    // doesn't cover (the actual score text, and whether the conditional
+    // "new record" line was showing), so both get captured and restored
+    // around the rebuild too.
+    private rebuildGameOverOverlayPreservingVisibility(): void {
+        const wasVisible =
+            this.gameOverOverlayElements?.[0]?.visible ?? false;
+        const wasRecordVisible = this.gameOverRecordText?.visible ?? false;
+        const previousScoreText = this.gameOverScoreText?.text;
+        this.destroyGameOverOverlay();
+        this.buildGameOverOverlay();
+        if (previousScoreText) {
+            this.gameOverScoreText.setText(previousScoreText);
+        }
+        this.showGameOverOverlay(wasVisible);
+        this.gameOverRecordText.setVisible(wasVisible && wasRecordVisible);
+    }
+
     setNextFruitSprite(nextFruit: OrbTier): void {
         this.nextFruitSprite.setTexture(fruitTypeToTextureString(nextFruit));
         this.nextFruitSprite.setDisplaySize(
@@ -652,7 +837,7 @@ export class HUDScene extends Phaser.Scene {
         this.nextFruitText.setVisible(true);
     }
 
-    private createPauseOverlayButton(
+    private createOverlayButton(
         x: number,
         y: number,
         label: string,
@@ -672,6 +857,10 @@ export class HUDScene extends Phaser.Scene {
 
     private showPauseOverlay(visible: boolean): void {
         this.pauseOverlayElements.forEach((el) => el.setVisible(visible));
+    }
+
+    private showGameOverOverlay(visible: boolean): void {
+        this.gameOverOverlayElements.forEach((el) => el.setVisible(visible));
     }
 
     private enablePauseIcon(): void {
@@ -697,8 +886,31 @@ export class HUDScene extends Phaser.Scene {
         this.scene.resume('MainScene');
     }
 
+    // "Jugar de nuevo" from the game-over overlay — mirrors
+    // closePauseOverlay() (re-enable the pause icon, resume MainScene) but
+    // additionally asks MainScene to actually clear the board first (see
+    // MainScene.ts's 'restartAfterGameOver' listener) — a resumed pause
+    // just un-freezes the same board; this one needs a genuinely fresh one.
+    private playAgainFromGameOver(): void {
+        this.showGameOverOverlay(false);
+        this.enablePauseIcon();
+        this.mainScene.events.emit('restartAfterGameOver');
+        this.scene.resume('MainScene');
+    }
+
     private returnToMenu(): void {
+        // Hides *both* overlays unconditionally rather than branching on
+        // which one is actually open — this is the one shared exit path
+        // for leaving MainScene entirely (pause's own "Volver al menú" and
+        // the game-over overlay's both call it), and it's cheap/harmless
+        // to hide an overlay that was already hidden. Keeping a single
+        // trusted cleanup path here (instead of two near-duplicates, one
+        // per overlay) is deliberate: this is exactly the method a past
+        // version of this scene had a real listener-leak bug in, so a
+        // second copy is a second place for that class of bug to come
+        // back in.
         this.showPauseOverlay(false);
+        this.showGameOverOverlay(false);
         // MainScene's own 'returnToMenu' handler resets the board and stops
         // itself (see MainScene.ts) — this scene's job is just to trigger
         // that, then leave too. this.scene.start('MenuScene') stops THIS

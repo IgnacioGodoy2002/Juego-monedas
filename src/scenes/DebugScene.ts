@@ -1,3 +1,5 @@
+import { applyUniformDPRCameraFit, applyDPRToAllText } from '../util/HiDPI';
+
 export class DebugScene extends Phaser.Scene {
     private isVisible: boolean;
     private debugTextGroup: Phaser.GameObjects.Group;
@@ -17,6 +19,13 @@ export class DebugScene extends Phaser.Scene {
     }
 
     create(): void {
+        // DebugScene never adapts to live resize today (its own layout
+        // uses static game.config.width, not this.scale.width, and has no
+        // 'resize' listener of its own — a pre-existing limitation, not
+        // something this HiDPI work is scoped to fix), so this is a
+        // one-time call rather than the create()+onResize() pair every
+        // other scene uses.
+        applyUniformDPRCameraFit(this);
         var mainScene: Phaser.Scene = this.scene.get('MainScene');
         this.debugTexts = {};
         this.y = 100;
@@ -92,6 +101,9 @@ export class DebugScene extends Phaser.Scene {
         this.registry.set('debugVisible', true);
         this.lastControlsInfoVisibility = false;
         this.lastOutlinesVisibility = true;
+
+        // Last line, after every debug Text object above has been created.
+        applyDPRToAllText(this);
     }
 
     addKey(key: string): void {

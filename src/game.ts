@@ -14,6 +14,7 @@ import {
     saveGameOptions,
 } from './storage';
 import { BGM_KEY, setBgmVolume } from './managers/Bgm';
+import { cacheDevicePixelRatio, applyHiDPIBackingStore } from './util/HiDPI';
 import {
     initI18n,
     t,
@@ -118,6 +119,21 @@ window.onload = () => {
     const startGame = () => {
         var game = new SuikaCloneGame(config);
         global.game = game;
+
+        // Registered immediately after construction, before any scene has
+        // booted — this wins the listener-order race against Phaser's own
+        // CameraManager (which registers its auto-resize listener during
+        // each scene's boot, later than this) so applyHiDPIBackingStore()'s
+        // baseSize override is already in place by the time CameraManager
+        // reads it to auto-track HUDScene/MenuScene/DebugScene's cameras
+        // (still zoom=1 as of Etapa 2 — those get their own dpr-aware zoom
+        // in Etapa 3).
+        cacheDevicePixelRatio(game);
+        applyHiDPIBackingStore(game);
+        game.scale.on('resize', () => {
+            cacheDevicePixelRatio(game);
+            applyHiDPIBackingStore(game);
+        });
 
         initSuraService().initialize();
     };

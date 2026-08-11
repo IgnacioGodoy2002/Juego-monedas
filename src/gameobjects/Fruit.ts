@@ -98,7 +98,11 @@ export const ORB_TIER_SCALES: Record<OrbTier, number> = {
     [OrbTier.Esmeralda]: 0.2512, // tier 7, unchanged: 216.0 / 860
     [OrbTier.Reina]: 0.2763, // tier 8 now: 237.6 / 860
     [OrbTier.Zafiro]: 0.3014, // tier 9 now: 259.2 / 860
-    [OrbTier.OrbeSolar]: 0.8259, // tier 10 now: 7_diamante.png is 340x340 -> 280.8 / 340
+    // Re-measured during the HiDPI sharpness diagnosis: 7_diamante.png is
+    // actually 320x320, not 340x340 as this comment previously assumed
+    // (stale since whenever the file was last replaced) — corrected to
+    // 280.8 / 320.
+    [OrbTier.OrbeSolar]: 0.8775, // tier 10: 280.8 / 320
     // Supernova moved from tier 7 to tier 11 when Esmeralda/Zafiro/Platino/
     // Reina were inserted, so its target diameter grows too (still the same
     // formula, just a bigger tier number): 2.7 * (24 + 11*8) = 302.4.
@@ -121,7 +125,14 @@ export const ORB_TIER_HITBOX_FRACTIONS: Record<OrbTier, number> = {
     [OrbTier.Nucleo]: 0.7824,
     [OrbTier.Cristal]: 0.7818,
     [OrbTier.Prisma]: 0.7818,
-    [OrbTier.OrbeSolar]: 0.8147,
+    // Re-measured against the real current 7_diamante.png (320x320, not
+    // the 340x340 this old 0.8147 value was computed against): last
+    // radius with alpha>=250 averaged 154.5px of a 160px half-width ->
+    // 0.9656. The stale, too-small value left the collider ~15 points
+    // smaller than the actually-opaque disc, letting the sprite visibly
+    // overlap neighbors and poke past the jar wall well before its real
+    // hitbox touched anything.
+    [OrbTier.OrbeSolar]: 0.9656,
     // All 4 new files measured identically (337px of 430px half-width on
     // all 4 cardinal rays) — same glow-margin convention across the set.
     [OrbTier.Esmeralda]: 0.7837,

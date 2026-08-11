@@ -184,7 +184,17 @@ svg {
 
 .top-menu > .icon-bar {
     position: absolute;
-    right: 20px;
+    /* HUDScene's "Siguiente" next-coin panel is 80px wide, right edge
+       flush with the canvas's real right edge (positioned at
+       this.scale.width - 40, radius 40 — see HUDScene.ts's
+       repositionHeader()), so its left edge always sits exactly 80px from
+       the real screen edge on any device, desktop included — that's a
+       property of HUDScene's own real-screen-space coordinates, not of
+       viewport width, so unlike the mobile-only rule below there's no
+       reason this reservation should stop applying above the 1028px
+       breakpoint. It used to (a flat 20px, pre-dating the panel's current
+       position), which is what let the volume icon overlap it on desktop. */
+    right: 88px;
 }
 
 .top-menu > .icon-bar > a.link-icon {
@@ -197,32 +207,10 @@ svg {
 }
 
 /* Below the game-wrapper breakpoint (see the .game-wrapper media query
-   above), the wrapper is 100% viewport width. This icon row lives in the
-   DOM, not on canvas, so it still needs its own rule to avoid colliding
-   with HUDScene's "Siguiente" next-coin panel — but the math changed with
-   the Phaser.Scale.RESIZE migration (see MainScene/HUDScene/MenuScene's
-   own RESIZE-migration comments): the canvas's logical resolution now
-   equals the real viewport 1:1, instead of a fixed 580-wide logical canvas
-   scaled down via CSS under Scale.FIT. That means content positioned from
-   Phaser's own live this.scale.width (like the Siguiente panel) sits a
-   CONSTANT number of real pixels from the screen edge on every device now
-   — proportional `vw` sizing for the reserved gap would be wrong today
-   (it was only correct because FIT's downscale factor was itself
-   proportional to viewport width; RESIZE has no such factor). The 20px
-   value in the default rule above is left as-is for wider layouts
-   (>1028px), where the wrapper is only 50vw and none of this applies. */
+   above), the wrapper is 100% viewport width. The 88px right-reservation
+   above already applies at every width now — only the icon *size* still
+   needs its own mobile-only rule. */
 @media (max-width: 1028px) {
-    .top-menu > .icon-bar {
-        /* HUDScene's next-coin panel is 80px wide, right edge flush with
-           the canvas's real right edge (see HUDScene.ts's
-           repositionHeader(): positioned at this.scale.width - 40, radius
-           40) — so its left edge always sits exactly 80px from the real
-           screen edge, regardless of viewport width. Reserving that 80px
-           plus a small fixed gap keeps this row clear of the panel on
-           every screen narrower than the breakpoint above. */
-        right: 88px;
-    }
-
     /* Icons still need to shrink on narrow phones — reserving 88px on the
        right plus the pause button sitting at the real screen's horizontal
        center (see HUDScene.ts's repositionHeader()) leaves less room for
@@ -240,6 +228,39 @@ svg {
     .top-menu > .icon-bar > a.link-icon svg {
         width: clamp(12px, 4vw, 20px);
         height: clamp(12px, 4vw, 20px);
+    }
+}
+
+/* Mobile-only: volume -/+ move out of the top-right icon row entirely,
+   under the Puntaje/Récord readout at the top-left instead. That row was
+   the most crowded part of the whole header on a narrow phone (gear, mute,
+   -, +, all squeezed against the reserved 88px "Siguiente" gap and the
+   pause button at center) — moving two of the four icons elsewhere gives
+   the remaining ones (gear, mute) real room, and there's genuinely empty
+   space under the score readout with nothing else there to compete with.
+   Desktop keeps the original single-row layout — this never had the
+   crowding problem BUTTON_MOBILE_BREAKPOINT (600, matching the same
+   breakpoint MenuScene.ts's button-shrink and how-to-play-panel-compact
+   logic uses) is meant to distinguish.
+   position:fixed (not absolute) anchors these directly to the viewport —
+   simpler than fighting .icon-bar's own right-anchored positioned-ancestor
+   context to reach back across the screen to the left side. The 54px top
+   clears Récord's own worst-case (20px, the max of HUD_SCORE font scaling)
+   row height starting at y=30. */
+@media (max-width: 600px) {
+    .top-menu > .icon-bar > .volume-down-link,
+    .top-menu > .icon-bar > .volume-up-link {
+        position: fixed;
+        top: 54px;
+        margin-right: 0;
+    }
+
+    .top-menu > .icon-bar > .volume-down-link {
+        left: 10px;
+    }
+
+    .top-menu > .icon-bar > .volume-up-link {
+        left: 34px;
     }
 }
 
@@ -375,7 +396,19 @@ button.close {
 }
 
 .settings > .settings-item-group {
+    /* Used to be a bare width:100% — with no side padding, content spanned
+       the full canvas edge-to-edge, so the right-hand column (values,
+       language buttons) sat flush against the real screen edge on
+       narrower canvases, and the 3rd language button ("English") could
+       run past it entirely. max-width + centered auto margins narrows it
+       into a readable column instead of a full-bleed row (also asked for
+       independently — "achicalo un poco"); the padding is what actually
+       stops "English" from being clipped on mobile. */
     width: 100%;
+    max-width: 480px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    margin: 0 auto;
 }
 
 .settings .settings-item {

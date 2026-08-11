@@ -12,7 +12,8 @@
         "win": "You reached the Supernova! Amazing!\nKeep it up!",
         "chainReaction": "Chain reaction! +{{points}} points",
         "tapToPlay": "Tap to drop a coin",
-        "next": "Next"
+        "next": "Next",
+        "playAgain": "Play again"
     },
     "pause": {
         "title": "Paused",

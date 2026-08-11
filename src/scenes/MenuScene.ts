@@ -13,6 +13,7 @@ import {
     COIN_TIER_FILES,
     ORB_TIER_HITBOX_FRACTIONS,
 } from '../gameobjects/Fruit';
+import { applyUniformDPRCameraFit, applyDPRToAllText } from '../util/HiDPI';
 
 const BUTTON_WIDTH = 280;
 const BUTTON_HEIGHT = 64;
@@ -42,7 +43,7 @@ const MENU_JAR_CONTENT_HEIGHT = 2251;
 // text. Panel width leaves ~40px margin on each side of the 580px canvas;
 // height is never hardcoded (see buildHowToPlayMode's layout cursor) since
 // pt/en translations wrap to a different number of lines than es.
-const HOWTOPLAY_PANEL_WIDTH = 500;
+const HOWTOPLAY_PANEL_WIDTH = 460;
 const HOWTOPLAY_PANEL_PADDING = 24;
 const HOWTOPLAY_SECTION_GAP = 20;
 const HOWTOPLAY_HEADER_GAP = 6;
@@ -167,6 +168,15 @@ export class MenuScene extends Phaser.Scene {
         // 'shutdown' cleanup below every time.
         onLanguageChanged(this.boundOnLanguageChanged);
         this.scale.on('resize', this.boundOnResize);
+        // Same reasoning as HUDScene: the very first 'resize' of the
+        // session fires before this listener is registered, so the
+        // camera needs this explicit call too or it stays at zoom=1 until
+        // an actual window resize happens (which may be never).
+        applyUniformDPRCameraFit(this);
+        // buildContent() above already created every Text object for both
+        // modes (menu + how-to-play — showMode() only toggles visibility),
+        // so it's safe to sweep here.
+        applyDPRToAllText(this);
         this.events.once('shutdown', () => {
             offLanguageChanged(this.boundOnLanguageChanged);
             this.scale.off('resize', this.boundOnResize);
@@ -254,13 +264,15 @@ export class MenuScene extends Phaser.Scene {
         this.jarImage.setDisplaySize(jarWidth, jarHeight);
 
         this.buildMenuMode(centerX, jarTop, jarHeight);
-        // Starts well past the neck (the jar is much narrower there than
-        // HOWTOPLAY_PANEL_WIDTH — starting any higher than this made the
-        // panel's corners visibly stick out past the glass on both sides,
-        // rather than reading as "inside" the jar) — roughly where the
-        // body has already widened to its full cylindrical shape, same
-        // area buildMenuMode's own buttons start clearing at their 0.30.
-        this.buildHowToPlayMode(centerX, jarTop + jarHeight * 0.18);
+        // Starts past the neck (the jar is narrower there than
+        // HOWTOPLAY_PANEL_WIDTH — starting too high makes the panel's
+        // corners visibly stick out past the glass, rather than reading as
+        // "inside" the jar) — the fraction was 0.18, moved up to 0.1 since
+        // real-device testing found the panel sitting noticeably low on
+        // screen; the panel itself is also a little narrower now (see
+        // HOWTOPLAY_PANEL_WIDTH), which is what keeps this from
+        // overflowing the glass at this higher start point.
+        this.buildHowToPlayMode(centerX, jarTop + jarHeight * 0.1);
     }
 
     private destroyContent(): void {
@@ -272,6 +284,7 @@ export class MenuScene extends Phaser.Scene {
 
     private onResize(gameSize: Phaser.Structs.Size): void {
         console.log('[MenuScene] resize ->', gameSize.width, gameSize.height);
+        applyUniformDPRCameraFit(this);
         // Preserves whichever mode ("menu" vs "howToPlay") was already
         // showing — a live resize/orientation change while reading "Cómo
         // jugar" shouldn't silently snap back to the main menu, same
@@ -281,6 +294,7 @@ export class MenuScene extends Phaser.Scene {
         this.destroyContent();
         this.buildContent();
         this.showMode(currentMode);
+        applyDPRToAllText(this);
     }
 
     // Buttons sit inside the jar's empty glass, above the coin pile.
@@ -384,14 +398,18 @@ export class MenuScene extends Phaser.Scene {
         // 14-sized viewport: natural height ~772px against ~845px of real
         // screen height total (and this panel doesn't start at y=0 — the
         // title/jar-neck above it eats a good chunk first) — meaning it
-        // needs to shrink to roughly 3/4 size to comfortably fit with the
-        // back button visible. Scaling every size constant below by the
-        // same factor keeps the panel internally proportional instead of
-        // shrinking one thing (say, just the font) and leaving the rest
-        // fixed. Desktop (isMobile false) is untouched — this panel already
-        // fits comfortably there.
+        // needs to shrink to roughly 2/3 size to comfortably fit with the
+        // back button visible, plus room to spare. Scaling every size
+        // constant below by the same factor keeps the panel internally
+        // proportional instead of shrinking one thing (say, just the font)
+        // and leaving the rest fixed. Desktop gets a milder version of the
+        // same treatment — it was never in danger of overflowing, but
+        // "occupies too much" was a separate, real complaint on its own,
+        // and shrinking it slightly is also what lets the panel move
+        // higher up (see buildContent()'s own 0.1 fraction) without its
+        // corners overflowing the jar's narrower neck at that height.
         const isMobile = this.scale.width < BUTTON_MOBILE_BREAKPOINT;
-        const compactScale = isMobile ? 0.72 : 1;
+        const compactScale = isMobile ? 0.65 : 0.85;
         const panelPadding = HOWTOPLAY_PANEL_PADDING * compactScale;
         const sectionGap = HOWTOPLAY_SECTION_GAP * compactScale;
         const headerGap = HOWTOPLAY_HEADER_GAP * compactScale;

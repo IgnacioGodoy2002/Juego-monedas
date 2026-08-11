@@ -5,6 +5,7 @@ import {
     ORB_TIER_COLORS,
     COIN_TIER_FILES,
     BLINK_COIN_FILES,
+    ORB_TIER_HITBOX_FRACTIONS,
 } from '../gameobjects/Fruit';
 import { Player } from '../gameobjects/Player';
 import { GameManager } from '../managers/GameManager';
@@ -20,6 +21,7 @@ import {
     CANVAS_HEIGHT,
     HEADER_HEIGHT,
 } from '../config/boardLayout';
+import { DEVICE_PIXEL_RATIO_REGISTRY_KEY } from '../util/HiDPI';
 
 const POINTS_PER_TIER = 5;
 export const SUPERNOVA_CHAIN_BONUS = 300;
@@ -48,6 +50,7 @@ const COLLISION_SOUND_COOLDOWN_MS = 70;
 const MAIN_SCENE_CUSTOM_EVENT_NAMES = [
     'updateScore',
     'gameOver',
+    'restartAfterGameOver',
     'returnToMenu',
     'gameStarted',
     'moveLeft',
@@ -267,6 +270,21 @@ export class MainScene extends Phaser.Scene {
                 // Service not initialised — standalone fallback, ignore.
             }
             this.gameManager.setGameOver(true);
+            // No resetBoard() here anymore — used to wipe the jar and the
+            // score display the instant the danger timer ran out, before
+            // the player had any real acknowledgement they'd lost (see
+            // HUDScene.ts's game-over overlay, which now owns pausing this
+            // scene and showing the final board/score until the player
+            // picks "Jugar de nuevo" or "Volver al menú"). The board stays
+            // exactly as it was until one of those fires the matching
+            // event below.
+        });
+
+        // Emitted by HUDScene's game-over overlay's "Jugar de nuevo"
+        // button — same reset as the old automatic one used to do, just
+        // deferred until the player actually asks for a new round instead
+        // of firing the instant the previous one ended.
+        this.events.on('restartAfterGameOver', () => {
             this.resetBoard();
         });
 
@@ -507,6 +525,29 @@ export class MainScene extends Phaser.Scene {
                                 fruit1.fruitType + 1,
                                 debugGraphics
                             );
+                            // The merge product is bigger than either parent
+                            // — spawning it at fruit1.x unclamped let its own
+                            // (larger) radius already overlap a wall or a
+                            // neighboring coin the instant it appeared,
+                            // unlike the tap-to-drop path a few lines up in
+                            // this file, which has always clamped by its
+                            // own radius. Most visible on the 5 largest
+                            // merge-product tiers (Esmeralda/Reina/Zafiro/
+                            // OrbeSolar/Supernova, radius 108-151px) —
+                            // confirmed via a real 6-zafiro-at-the-wall
+                            // repro that produced a merged OrbeSolar with
+                            // its hitbox circle ~10px past the left wall.
+                            const newRadius =
+                                (fruit.displayWidth / 2) *
+                                ORB_TIER_HITBOX_FRACTIONS[fruit.fruitType];
+                            const clampedX = Phaser.Math.Clamp(
+                                fruit1.x,
+                                newRadius,
+                                PLAY_AREA_WIDTH - newRadius
+                            );
+                            if (clampedX !== fruit1.x) {
+                                fruit.setPosition(clampedX, fruit.y);
+                            }
                             this.fruits.add(fruit, true);
                             this.fruits.remove(fruit1, true, true);
                             this.fruits.remove(fruit2, true, true);
@@ -603,7 +644,19 @@ export class MainScene extends Phaser.Scene {
             // this has to stay in screen space, since it's about the
             // physical edge of the device, not the fixed 580x1192 logical
             // board the camera now zooms/crops into that screen.
-            if (pointer.y >= this.scale.height - 100) {
+            //
+            // pointer.y itself is in backing-store pixel units since the
+            // Etapa 2 HiDPI change (applyHiDPIBackingStore() deliberately
+            // makes displayScale = dpr so every camera's getWorldPoint call
+            // — including the one a few lines down — keeps working without
+            // per-call-site patching), but this.scale.height stays in
+            // logical/CSS units on purpose (see that same function's
+            // comment) — so the right-hand side needs the same *dpr here to
+            // compare apples to apples. This is the one other place in the
+            // codebase that reads pointer.x/y directly (confirmed via a
+            // full grep of src/ during the HiDPI plan's impact audit).
+            const dpr = this.registry.get(DEVICE_PIXEL_RATIO_REGISTRY_KEY) || 1;
+            if (pointer.y >= (this.scale.height - 100) * dpr) {
                 return;
             }
             // pointer.x/y are always screen-space. With the camera now
@@ -618,9 +671,28 @@ export class MainScene extends Phaser.Scene {
                 pointer.x,
                 pointer.y
             ).x;
+            // updateCameraFit() deliberately shows more than just the jar
+            // on wide desktop screens (real decorative background on either
+            // side, restoring the old Scale.FIT look) — getWorldPoint()
+            // above happily returns a coordinate out there too, tapping
+            // anywhere in that now-visible-and-tappable margin used to
+            // spawn a fruit at that raw, unclamped X. matter.world's walls
+            // (below) only exist across [0, PLAY_AREA_WIDTH]; a fruit
+            // spawned outside that range never touches one and just
+            // free-falls off-screen — the escaped-coin bug. Clamping here,
+            // inset by a generous DROP_X_MARGIN so even the largest coin
+            // tier doesn't spawn already overlapping a wall, keeps every
+            // drop inside the physical jar regardless of where the tap
+            // landed.
+            const DROP_X_MARGIN = 50;
+            const clampedWorldX = Phaser.Math.Clamp(
+                worldX,
+                DROP_X_MARGIN,
+                PLAY_AREA_WIDTH - DROP_X_MARGIN
+            );
             this.events.emit(
                 'dropFruit',
-                this.controls === 'tap' ? worldX : this.player.x
+                this.controls === 'tap' ? clampedWorldX : this.player.x
             );
         });
 
@@ -726,8 +798,31 @@ export class MainScene extends Phaser.Scene {
     // a bit of it back, on every screen size, uniformly.
     private updateCameraFit(): void {
         const CAMERA_ZOOM_MARGIN = 0.94;
+        // dpr folds in Etapa 2 of the HiDPI plan: the canvas backing store
+        // is now `dpr` times denser than scale.height (see
+        // applyHiDPIBackingStore() in util/HiDPI.ts, which deliberately
+        // keeps scale.width/height — read below — at the logical/CSS size).
+        // Multiplying zoom by the same dpr makes this camera render the
+        // exact same world-space framing, just into more actual pixels —
+        // but only if the camera's own width/height also match the denser
+        // backing store, which is why setSize() is called explicitly
+        // below instead of relying on Phaser's CameraManager auto-track
+        // (CameraManager.onResize only re-syncs a camera's size when its
+        // current width happens to exactly equal the game's *previous*
+        // logical width — true right after a fresh page load, but NOT
+        // reliably true across a scene restart, e.g. "Jugar de nuevo" or
+        // returning to MainScene from the menu, where a freshly-created
+        // default camera can end up staying at the logical size while
+        // this zoom formula already has dpr folded in — a width/zoom
+        // mismatch that silently breaks getWorldPoint()'s screen-to-world
+        // mapping for drops. Found via the Etapa 2 checkpoint's real-click
+        // drop-X test, which is exactly the kind of bug that test exists
+        // to catch. Setting size explicitly here removes the dependency
+        // on that fragile auto-track heuristic entirely.
+        const dpr = this.registry.get(DEVICE_PIXEL_RATIO_REGISTRY_KEY) || 1;
+        this.cameras.main.setSize(this.scale.width * dpr, this.scale.height * dpr);
         const zoom =
-            (this.scale.height / CANVAS_HEIGHT) * CAMERA_ZOOM_MARGIN;
+            (this.scale.height / CANVAS_HEIGHT) * CAMERA_ZOOM_MARGIN * dpr;
         this.cameras.main.setZoom(zoom);
         this.cameras.main.centerOn(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     }
