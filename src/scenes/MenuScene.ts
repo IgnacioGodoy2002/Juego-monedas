@@ -284,6 +284,14 @@ export class MenuScene extends Phaser.Scene {
 
     private onResize(gameSize: Phaser.Structs.Size): void {
         console.log('[MenuScene] resize ->', gameSize.width, gameSize.height);
+        // Same 0x0-during-Ajustes guard as HUDScene.onResize() — no
+        // reported symptom here yet, but destroyContent()/buildContent()
+        // below rebuild every menu element (title, buttons, how-to-play
+        // panel) from this.scale.width/height, same class of bug, added
+        // preventively for consistency.
+        if (gameSize.width === 0 || gameSize.height === 0) {
+            return;
+        }
         applyUniformDPRCameraFit(this);
         // Preserves whichever mode ("menu" vs "howToPlay") was already
         // showing — a live resize/orientation change while reading "Cómo

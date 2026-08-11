@@ -539,6 +539,17 @@ export class HUDScene extends Phaser.Scene {
 
     private onResize(gameSize: Phaser.Structs.Size): void {
         console.log('[HUDScene] resize ->', gameSize.width, gameSize.height);
+        // Same 0x0-during-Ajustes guard as applyUniformDPRCameraFit() —
+        // needed here too since every function below reads
+        // this.scale.width/height directly (repositionHeader() sends
+        // pauseIcon/nextFruitText off to a bogus x=0/-40, and
+        // rescaleFreeFloatingTextFontSizes() shrinks Puntaje/Récord to
+        // their min-clamp fontSize) with no guard of their own. Confirmed
+        // live: without this, those elements visibly jump for the entire
+        // time the Ajustes panel is open, then jump back on close.
+        if (gameSize.width === 0 || gameSize.height === 0) {
+            return;
+        }
         applyUniformDPRCameraFit(this);
         this.repositionHeader();
         this.rebuildPauseOverlayPreservingVisibility();
