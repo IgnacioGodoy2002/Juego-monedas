@@ -131,14 +131,19 @@ export const ORB_TIER_HITBOX_FRACTIONS: Record<OrbTier, number> = {
     [OrbTier.Nucleo]: 0.7824,
     [OrbTier.Cristal]: 0.7818,
     [OrbTier.Prisma]: 0.7818,
-    // Re-measured against the real current 7_diamante.png (320x320, not
-    // the 340x340 this old 0.8147 value was computed against): last
-    // radius with alpha>=250 averaged 154.5px of a 160px half-width ->
-    // 0.9656. The stale, too-small value left the collider ~15 points
-    // smaller than the actually-opaque disc, letting the sprite visibly
-    // overlap neighbors and poke past the jar wall well before its real
-    // hitbox touched anything.
-    [OrbTier.OrbeSolar]: 0.9656,
+    // Re-measured against the current 7_diamante.png (320x320, not the
+    // 340x340 this old 0.8147 value was computed against): last radius
+    // with alpha>=250 averaged 151.25px of a 160px half-width -> 0.9453.
+    // The file was also masked to a perfect circle (radius 152px, a
+    // uniform 360-degree scan confirms zero remaining spikes anywhere) to
+    // remove two residual sparkle/glint decorations that broke the
+    // circular silhouette — the first mask pass (radius 159) left small
+    // edge nubs from both sparkles still poking through, tightening it to
+    // 152 (plus a separate content patch for the second sparkle's bright
+    // core, which sat inside the silhouette rather than past its edge)
+    // finally cleared both. Fraction dropped slightly from the previous
+    // 0.9656 as a result.
+    [OrbTier.OrbeSolar]: 0.9453,
     // All 4 new files measured identically (337px of 430px half-width on
     // all 4 cardinal rays) — same glow-margin convention across the set.
     [OrbTier.Esmeralda]: 0.7837,
