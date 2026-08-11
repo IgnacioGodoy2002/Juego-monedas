@@ -60,13 +60,65 @@ export function cacheDevicePixelRatio(game: Phaser.Game): void {
 // happens synchronously before the event is emitted — see
 // ScaleManager.refresh()/updateScale() in phaser/src/scale/ScaleManager.js)
 // so this override isn't immediately clobbered.
+// Last known-good backing-store size, re-asserted whenever a 0x0 resize
+// comes in (see applyHiDPIBackingStore() below) — a plain early-return
+// wouldn't be enough here, because by the time this function is called,
+// Phaser's own ScaleManager.updateScale() has *already* set
+// canvas.width/height/baseSize to 0 for this cycle (that assignment
+// happens synchronously inside refresh(), before the 'resize' event —
+// and therefore this listener — fires). Skipping our own work would just
+// leave Phaser's own zeroed-out values in place; actively re-applying the
+// last good size is what actually keeps the canvas from collapsing.
+let lastGoodBackingWidth = 0;
+let lastGoodBackingHeight = 0;
+let lastGoodLogicalWidth = 0;
+let lastGoodLogicalHeight = 0;
+
 export function applyHiDPIBackingStore(game: Phaser.Game): void {
-    const dpr = getEffectiveDevicePixelRatio();
     const scaleManager = game.scale;
     const logicalWidth = scaleManager.gameSize.width;
     const logicalHeight = scaleManager.gameSize.height;
+
+    // A 0x0 resize isn't a real size change — it happens whenever #content
+    // (Phaser's RESIZE-mode parent element) momentarily loses its layout
+    // box, e.g. index.html's Ajustes panel setting the game pane's
+    // ancestor to display:none. Applying the backing-store math to 0
+    // would collapse canvas.width/height/baseSize to 0 and, downstream,
+    // every camera's zoom/size to a degenerate value (confirmed live:
+    // MainScene's camera zoom bottomed out at Phaser's internal 0.001
+    // floor) — all of which then has to visibly snap back once the real
+    // size reappears. A 0-sized #content is never the real, final size
+    // the user is looking at, so instead of applying it, re-assert the
+    // last known-good backing-store state — canvas/baseSize/displayScale
+    // stay exactly as they were the moment before the collapse, for as
+    // long as it lasts.
+    if (logicalWidth === 0 || logicalHeight === 0) {
+        if (lastGoodBackingWidth === 0) {
+            // Nothing has ever succeeded yet (e.g. Ajustes opened before
+            // the very first real layout pass) — there's no known-good
+            // state to restore, so there's genuinely nothing to do.
+            return;
+        }
+        scaleManager.baseSize.resize(lastGoodBackingWidth, lastGoodBackingHeight);
+        game.canvas.width = lastGoodBackingWidth;
+        game.canvas.height = lastGoodBackingHeight;
+        game.canvas.style.width = `${lastGoodLogicalWidth}px`;
+        game.canvas.style.height = `${lastGoodLogicalHeight}px`;
+        game.renderer.resize(lastGoodBackingWidth, lastGoodBackingHeight);
+        scaleManager.displayScale.set(
+            lastGoodBackingWidth / lastGoodLogicalWidth,
+            lastGoodBackingHeight / lastGoodLogicalHeight
+        );
+        return;
+    }
+
+    const dpr = getEffectiveDevicePixelRatio();
     const backingWidth = Math.round(logicalWidth * dpr);
     const backingHeight = Math.round(logicalHeight * dpr);
+    lastGoodBackingWidth = backingWidth;
+    lastGoodBackingHeight = backingHeight;
+    lastGoodLogicalWidth = logicalWidth;
+    lastGoodLogicalHeight = logicalHeight;
 
     // baseSize drives canvas.width/height assignment elsewhere in Phaser's
     // own code (e.g. CameraManager's auto-track, which cameras that never
@@ -133,6 +185,17 @@ export function applyHiDPIBackingStore(game: Phaser.Game): void {
 // across a scene stop/start cycle (see updateCameraFit()'s comment for
 // the full trace of how that broke drop placement in Etapa 2).
 export function applyUniformDPRCameraFit(scene: Phaser.Scene): void {
+    // Same 0x0-during-Ajustes guard as applyHiDPIBackingStore() — unlike
+    // that function, a plain skip is enough here (no "re-apply the last
+    // good value" needed): this camera's width is always dpr-multiplied
+    // and therefore never equal to Phaser's own CameraManager.onResize
+    // auto-track condition (cam._width === the game's previous logical
+    // width), so nothing else in Phaser's pipeline touches this camera
+    // when we simply don't call setSize/setZoom/centerOn — it just keeps
+    // whatever it was already correctly set to.
+    if (scene.scale.width === 0 || scene.scale.height === 0) {
+        return;
+    }
     const dpr =
         scene.registry.get(DEVICE_PIXEL_RATIO_REGISTRY_KEY) || 1;
     const camera = scene.cameras.main;

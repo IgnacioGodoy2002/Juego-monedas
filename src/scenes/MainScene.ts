@@ -797,6 +797,19 @@ export class MainScene extends Phaser.Scene {
     // margin shrinks proportionally along with everything else. This adds
     // a bit of it back, on every screen size, uniformly.
     private updateCameraFit(): void {
+        // A 0x0 resize isn't a real size change — it fires whenever
+        // #content momentarily loses its layout box (e.g. index.html's
+        // Ajustes panel hiding .game, its ancestor, via display:none).
+        // Skipping here leaves this camera's zoom/width/scroll exactly as
+        // they were: since its width is always dpr-multiplied, it can
+        // never match Phaser's own CameraManager.onResize auto-track
+        // condition, so nothing else touches it while we don't either.
+        // Confirmed live: without this guard, zoom bottomed out at
+        // Phaser's internal 0.001 floor for the whole time Ajustes stayed
+        // open, then had to visibly snap back once it closed.
+        if (this.scale.width === 0 || this.scale.height === 0) {
+            return;
+        }
         const CAMERA_ZOOM_MARGIN = 0.94;
         // dpr folds in Etapa 2 of the HiDPI plan: the canvas backing store
         // is now `dpr` times denser than scale.height (see
