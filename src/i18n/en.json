@@ -2,7 +2,13 @@
     "menu": {
         "title": "Coin Kingdom",
         "play": "Play",
-        "settings": "Settings"
+        "settings": "Settings",
+        "ranking": "Ranking"
+    },
+    "ranking": {
+        "title": "Ranking",
+        "you": "(you)",
+        "back": "Back to menu"
     },
     "hud": {
         "score": "Score:",

@@ -2,6 +2,7 @@ import 'phaser';
 import { MenuScene } from './scenes/MenuScene';
 import { MainScene } from './scenes/MainScene';
 import { HUDScene } from './scenes/HUDScene';
+import { RankingScene } from './scenes/RankingScene';
 import { DebugScene } from './scenes/DebugScene';
 import { initSuraService } from './integration/sura/SuraIntegrationService';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from './config/boardLayout';
@@ -66,7 +67,7 @@ class SuikaCloneGame extends Phaser.Game {
     }
 }
 
-var scenes: Function[] = [MenuScene, MainScene, HUDScene];
+var scenes: Function[] = [MenuScene, MainScene, HUDScene, RankingScene];
 
 if (debugEnabled) {
     scenes.push(DebugScene);
