@@ -2,7 +2,13 @@
     "menu": {
         "title": "Coin Kingdom",
         "play": "Jugar",
-        "settings": "Configuración"
+        "settings": "Configuración",
+        "ranking": "Ranking"
+    },
+    "ranking": {
+        "title": "Ranking",
+        "you": "(vos)",
+        "back": "Volver al menú"
     },
     "hud": {
         "score": "Puntaje:",

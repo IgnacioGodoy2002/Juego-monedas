@@ -83,6 +83,7 @@ export class MenuScene extends Phaser.Scene {
     private jarImage: Phaser.GameObjects.Image;
     private playButtonText: Phaser.GameObjects.Text;
     private settingsButtonText: Phaser.GameObjects.Text;
+    private rankingButtonText: Phaser.GameObjects.Text;
     private menuModeElements: (
         | Phaser.GameObjects.Graphics
         | Phaser.GameObjects.Text
@@ -336,6 +337,7 @@ export class MenuScene extends Phaser.Scene {
 
         const playButtonY = jarTop + jarHeight * 0.3;
         const settingsButtonY = playButtonY + buttonHeight + BUTTON_GAP;
+        const rankingButtonY = settingsButtonY + buttonHeight + BUTTON_GAP;
 
         const playButton = this.createButton(
             centerX,
@@ -359,7 +361,22 @@ export class MenuScene extends Phaser.Scene {
         );
         this.settingsButtonText = settingsButton[1];
 
-        this.menuModeElements = [...playButton, ...settingsButton];
+        const rankingButton = this.createButton(
+            centerX,
+            rankingButtonY,
+            t('menu.ranking'),
+            () => {
+                playBgmIfNeeded(this.bgm);
+                this.scene.start('RankingScene');
+            }
+        );
+        this.rankingButtonText = rankingButton[1];
+
+        this.menuModeElements = [
+            ...playButton,
+            ...settingsButton,
+            ...rankingButton,
+        ];
     }
 
     // Panel height is never hardcoded — built with a running Y cursor so
@@ -649,6 +666,7 @@ export class MenuScene extends Phaser.Scene {
         );
         this.playButtonText.setText(t('menu.play'));
         this.settingsButtonText.setText(t('menu.settings'));
+        this.rankingButtonText.setText(t('menu.ranking'));
         this.howToPlayObjectiveHeadingText.setText(
             t('howToPlay.objectiveHeading')
         );
