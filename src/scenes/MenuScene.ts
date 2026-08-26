@@ -7,7 +7,14 @@ import {
     GOLD_FILL_TOP,
     GOLD_TEXT_COLOR,
 } from '../ui/GoldButton';
-import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
+import {
+    t,
+    onLanguageChanged,
+    offLanguageChanged,
+    setLanguage,
+    getCurrentLanguage,
+    SupportedLanguage,
+} from '../i18n';
 import {
     OrbTier,
     COIN_TIER_FILES,
@@ -23,6 +30,35 @@ const BUTTON_HEIGHT = 64;
 const BUTTON_WIDTH_MOBILE = 240;
 const BUTTON_HEIGHT_MOBILE = 54;
 const BUTTON_MOBILE_BREAKPOINT = 600;
+
+// Language chips (ES/EN/PT) — sit under the Ranking button, replacing the
+// old DOM "Ajustes" panel's language buttons now that the gear icon is
+// gone (settings.language / .language-option in index.html, removed).
+// Smaller than the main buttons (a full-width GoldButton per language
+// would eat too much of the jar's already tight vertical space), same
+// gold family as everything else drawn with GoldButton's palette.
+const LANG_CHIPS: SupportedLanguage[] = ['es', 'en', 'pt'];
+const LANG_CHIP_LABELS: Record<SupportedLanguage, string> = {
+    es: 'ES',
+    en: 'EN',
+    pt: 'PT',
+};
+const CHIP_WIDTH = 58;
+const CHIP_WIDTH_MOBILE = 48;
+const CHIP_HEIGHT = 30;
+const CHIP_HEIGHT_MOBILE = 26;
+const CHIP_SPACING = 10;
+const CHIP_SPACING_MOBILE = 6;
+const CHIP_TOP_GAP = 14;
+const CHIP_TOP_GAP_MOBILE = 10;
+const CHIP_CORNER_RADIUS = 10;
+
+// The 3 main buttons used to start lower (0.30 of jarHeight) — moved up
+// slightly to free the vertical room the language chip row below Ranking
+// needs, still comfortably clear of the jar's neck above (see this
+// method's own comment further down for the coin-pile boundary this whole
+// stack has to stay above).
+const PLAY_BUTTON_Y_FRACTION = 0.24;
 
 // assets/img/menu_jar.png's canvas is 1600x2656 (re-extracted via rembg/
 // isnet-general-use against a dark-shelf source photo, replacing the old
@@ -84,6 +120,17 @@ export class MenuScene extends Phaser.Scene {
     private playButtonText: Phaser.GameObjects.Text;
     private settingsButtonText: Phaser.GameObjects.Text;
     private rankingButtonText: Phaser.GameObjects.Text;
+    // Redrawn (not just repositioned) on a language change to flip which
+    // chip shows as "active" — see updateLanguageChipsActiveState().
+    private langChips: {
+        lang: SupportedLanguage;
+        bg: Phaser.GameObjects.Graphics;
+        text: Phaser.GameObjects.Text;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    }[] = [];
     private menuModeElements: (
         | Phaser.GameObjects.Graphics
         | Phaser.GameObjects.Text
@@ -329,13 +376,15 @@ export class MenuScene extends Phaser.Scene {
         jarTop: number,
         jarHeight: number
     ): void {
-        const BUTTON_GAP = 24;
         const isMobile = this.scale.width < BUTTON_MOBILE_BREAKPOINT;
+        // Tighter on mobile — needed to leave room for the language chip
+        // row below Ranking without pushing it into the coin pile.
+        const BUTTON_GAP = isMobile ? 16 : 20;
         const buttonHeight = isMobile
             ? BUTTON_HEIGHT_MOBILE
             : BUTTON_HEIGHT;
 
-        const playButtonY = jarTop + jarHeight * 0.3;
+        const playButtonY = jarTop + jarHeight * PLAY_BUTTON_Y_FRACTION;
         const settingsButtonY = playButtonY + buttonHeight + BUTTON_GAP;
         const rankingButtonY = settingsButtonY + buttonHeight + BUTTON_GAP;
 
@@ -372,11 +421,109 @@ export class MenuScene extends Phaser.Scene {
         );
         this.rankingButtonText = rankingButton[1];
 
+        const chipTopGap = isMobile ? CHIP_TOP_GAP_MOBILE : CHIP_TOP_GAP;
+        const chipHeight = isMobile ? CHIP_HEIGHT_MOBILE : CHIP_HEIGHT;
+        const chipsY =
+            rankingButtonY + buttonHeight / 2 + chipTopGap + chipHeight / 2;
+        const langChipElements = this.buildLanguageChips(
+            centerX,
+            chipsY,
+            isMobile
+        );
+
         this.menuModeElements = [
             ...playButton,
             ...settingsButton,
             ...rankingButton,
+            ...langChipElements,
         ];
+    }
+
+    // ES/EN/PT chips replacing the old DOM "Ajustes" panel's language
+    // buttons (see LANG_CHIPS's own comment). Built fresh every
+    // buildContent() call, same as every other menu element — this.langChips
+    // is reset here so a stale reference from a previous build/resize never
+    // leaks into updateLanguageChipsActiveState().
+    private buildLanguageChips(
+        centerX: number,
+        y: number,
+        isMobile: boolean
+    ): (Phaser.GameObjects.Graphics | Phaser.GameObjects.Text)[] {
+        this.langChips = [];
+        const elements: (
+            | Phaser.GameObjects.Graphics
+            | Phaser.GameObjects.Text
+        )[] = [];
+
+        const chipWidth = isMobile ? CHIP_WIDTH_MOBILE : CHIP_WIDTH;
+        const chipHeight = isMobile ? CHIP_HEIGHT_MOBILE : CHIP_HEIGHT;
+        const chipSpacing = isMobile ? CHIP_SPACING_MOBILE : CHIP_SPACING;
+        const totalWidth =
+            LANG_CHIPS.length * chipWidth +
+            (LANG_CHIPS.length - 1) * chipSpacing;
+        const startX = centerX - totalWidth / 2 + chipWidth / 2;
+
+        LANG_CHIPS.forEach((lang, i) => {
+            const x = startX + i * (chipWidth + chipSpacing);
+            const bg = this.add.graphics();
+            const text = this.add
+                .text(x, y, LANG_CHIP_LABELS[lang], {
+                    fontFamily: GAME_FONT_FAMILY,
+                    fontStyle: 'bold',
+                    fontSize: isMobile ? '13px' : '15px',
+                })
+                .setOrigin(0.5);
+
+            bg.setInteractive(
+                new Phaser.Geom.Rectangle(
+                    x - chipWidth / 2,
+                    y - chipHeight / 2,
+                    chipWidth,
+                    chipHeight
+                ),
+                Phaser.Geom.Rectangle.Contains
+            );
+            bg.input.cursor = 'pointer';
+            bg.on('pointerdown', () => setLanguage(lang));
+
+            this.langChips.push({ lang, bg, text, x, y, width: chipWidth, height: chipHeight });
+            elements.push(bg, text);
+        });
+
+        this.updateLanguageChipsActiveState();
+        return elements;
+    }
+
+    // Redraws each chip's background (solid gold fill for the active
+    // language, outline-only for the other two) and text color — called
+    // right after building the chips, and again on every 'languageChanged'
+    // event (see updateTranslatedTexts) so clicking a chip repaints all
+    // three in place without a full menu rebuild.
+    private updateLanguageChipsActiveState(): void {
+        const current = getCurrentLanguage();
+        this.langChips.forEach(({ lang, bg, text, x, y, width, height }) => {
+            const isActive = lang === current;
+            bg.clear();
+            const left = x - width / 2;
+            const top = y - height / 2;
+            if (isActive) {
+                bg.fillGradientStyle(
+                    GOLD_FILL_TOP,
+                    GOLD_FILL_TOP,
+                    GOLD_FILL_BOTTOM,
+                    GOLD_FILL_BOTTOM,
+                    1
+                );
+                bg.fillRoundedRect(left, top, width, height, CHIP_CORNER_RADIUS);
+                text.setColor(GOLD_TEXT_COLOR);
+            } else {
+                bg.fillStyle(0x000000, 0.18);
+                bg.fillRoundedRect(left, top, width, height, CHIP_CORNER_RADIUS);
+                text.setColor('#fff5d6');
+            }
+            bg.lineStyle(2, GOLD_BORDER, isActive ? 1 : 0.6);
+            bg.strokeRoundedRect(left, top, width, height, CHIP_CORNER_RADIUS);
+        });
     }
 
     // Panel height is never hardcoded — built with a running Y cursor so
@@ -667,6 +814,7 @@ export class MenuScene extends Phaser.Scene {
         this.playButtonText.setText(t('menu.play'));
         this.settingsButtonText.setText(t('menu.settings'));
         this.rankingButtonText.setText(t('menu.ranking'));
+        this.updateLanguageChipsActiveState();
         this.howToPlayObjectiveHeadingText.setText(
             t('howToPlay.objectiveHeading')
         );
