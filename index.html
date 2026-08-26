@@ -36,9 +36,6 @@
             <div class="top-menu-wrapper">
                 <nav id="top" class="top-menu">
                     <div class="icon-bar">
-                        <a class="settings-link link-icon" href="#">
-                            <i data-feather="settings"></i>
-                        </a>
                         <a class="mute-link link-icon" href="#">
                             <i data-feather="volume-2" class="icon-unmuted"></i>
                             <i data-feather="volume-x" class="icon-muted"></i>
@@ -64,67 +61,6 @@
                         <h3>Por favor, activá JavaScript para jugar este juego.</h3>
                     </div>
                 </noscript>
-            </div>
-            <div class="settings pane" style="display: none;">
-                <div class="top-space"></div>
-                <h1 data-i18n="settings.heading">Settings</h1>
-                <div class="space"></div>
-                <div class="settings-item-group">
-                    <div class="settings-item setting theme-switch">
-                        <div class="settings-item-column">
-                            <span data-i18n="settings.themeLabel">Theme</span>
-                        </div>
-                        <div class="settings-item-column">
-                            <span class="toggle">Coin Kingdom</span>
-                        </div>
-                    </div>
-                    <div class="settings-item setting controls">
-                        <div class="settings-item-column">
-                            <span data-i18n="settings.controlsLabel">Controls</span>
-                        </div>
-                        <div class="settings-item-column">
-                            <span class="toggle">Tap</span>
-                        </div>
-                    </div>
-                    <div class="settings-item setting-language">
-                        <div class="settings-item-column">
-                            <span data-i18n="settings.language">Idioma</span>
-                        </div>
-                        <div class="settings-item-column language-options">
-                            <button
-                                type="button"
-                                class="language-option"
-                                data-lang="es"
-                            >
-                                Español
-                            </button>
-                            <button
-                                type="button"
-                                class="language-option"
-                                data-lang="pt"
-                            >
-                                Português
-                            </button>
-                            <button
-                                type="button"
-                                class="language-option"
-                                data-lang="en"
-                            >
-                                English
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="space"></div>
-                <div class="footer">
-                    <!-- <span class="snow-theme credits">
-                        Snow effect from
-                        <a href="https://embed.im/snow/" target="_blank"
-                            >embed.im</a
-                        >
-                    </span> -->
-                </div>
-                <div class="space"></div>
             </div>
         </div>
         <div class="notification-area"></div>
@@ -168,11 +104,6 @@
             if (typeof feather !== 'undefined') {
                 feather.replace();
             } else {
-                document.querySelector("[data-feather='settings']").innerText =
-                    '⚙';
-                document.querySelector(
-                    ".settings [data-feather='x']"
-                ).innerText = 'X';
                 document.querySelector(
                     "[data-feather='volume-2']"
                 ).innerText = '🔊';

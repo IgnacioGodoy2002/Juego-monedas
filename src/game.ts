@@ -6,7 +6,6 @@ import { RankingScene } from './scenes/RankingScene';
 import { DebugScene } from './scenes/DebugScene';
 import { initSuraService } from './integration/sura/SuraIntegrationService';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from './config/boardLayout';
-import { renderNotification } from './page';
 import {
     GameOptions,
     GameState,
@@ -16,23 +15,12 @@ import {
 } from './storage';
 import { BGM_KEY, setBgmVolume } from './managers/Bgm';
 import { cacheDevicePixelRatio, applyHiDPIBackingStore } from './util/HiDPI';
-import {
-    initI18n,
-    t,
-    setLanguage,
-    getCurrentLanguage,
-    onLanguageChanged,
-    translateDom,
-    SupportedLanguage,
-} from './i18n';
+import { initI18n, onLanguageChanged, translateDom } from './i18n';
 
 // Same 10-step granularity in both directions; rounded to one decimal so
 // repeated +/- clicks land on exact tenths (0.1 + 0.1 + ... in floating
 // point drifts to values like 0.30000000000000004 otherwise).
 const MUSIC_VOLUME_STEP = 0.1;
-
-const THEME_SETTING_NAME = 'theme-switch';
-const CONTROLS_SETTING_NAME = 'controls';
 
 const LANDSCAPE_CLASS_NAME = 'landscape';
 
@@ -54,11 +42,10 @@ global.debugEnabled =
     new URLSearchParams(window.location.search).get('debug') === '1';
 
 // Called once, here — everything below that needs a translated string
-// (the Phaser scenes booted in window.onload, the settings-pane wiring
-// further down) awaits this same promise instead of calling initI18n()
-// again. Resolves as soon as i18next itself is ready (synchronous, bundled
-// JSON) — does NOT wait for IP-based geolocation to finish for a
-// first-time visitor, see i18n/index.ts.
+// (the Phaser scenes booted in window.onload) awaits this same promise
+// instead of calling initI18n() again. Resolves as soon as i18next itself
+// is ready (synchronous, bundled JSON) — does NOT wait for IP-based
+// geolocation to finish for a first-time visitor, see i18n/index.ts.
 const i18nReady = initI18n();
 
 class SuikaCloneGame extends Phaser.Game {
@@ -206,123 +193,18 @@ volumeUpLink.addEventListener('click', (e) => {
     volumeUpLink.blur();
 });
 
-const gamePane: HTMLDivElement = document.querySelector('.game');
-const settingsPane: HTMLDivElement = document.querySelector('.settings');
-const settingsLink: HTMLAnchorElement = document.querySelector(
-    '.settings-link'
-);
-
-const toggleSettings = () => {
-    settingsLink.blur();
-    if (settingsPane.style.display === 'none') {
-        gamePane.style.display = 'none';
-        settingsPane.style.display = 'flex';
-    } else {
-        gamePane.style.display = 'flex';
-        settingsPane.style.display = 'none';
-    }
-};
-
-settingsLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleSettings();
-});
-
-// Reads current gameOptions + current language and (re)paints both toggle
-// labels — called on initial load (once i18n is ready, see i18nReady.then
-// below), after either setting actually changes, and on every
-// 'languageChanged' event (a first-time visitor's IP-based language
-// detection can resolve *after* this has already run once with the 'es'
-// interim default — see i18n/index.ts).
-function updateToggleLabels(): void {
-    const themeToggle = document.querySelector(
-        '.setting.theme-switch .toggle'
-    );
-    if (themeToggle) {
-        themeToggle.innerHTML =
-            gameOptions.theme === 'fruit_basket'
-                ? t('settings.themeOrbMaker')
-                : t('settings.themeNumbers');
-    }
-    const controlsToggle = document.querySelector('.setting.controls .toggle');
-    if (controlsToggle) {
-        controlsToggle.innerHTML =
-            gameOptions.controls === 'move'
-                ? t('settings.controlsMove')
-                : t('settings.controlsTap');
-    }
-}
-
-const settings = document.querySelectorAll('.setting');
-settings.forEach((setting) => {
-    const elem = setting as HTMLDivElement;
-    setting.addEventListener('click', (e) => {
-        let optionChanged = false;
-        if (elem.classList.contains(THEME_SETTING_NAME)) {
-            if (game.registry.get('gameStarted')) {
-                renderNotification(t('settings.themeChangeBlocked'));
-                return;
-            }
-            gameOptions.theme =
-                gameOptions.theme === 'fruit_basket'
-                    ? 'numbers'
-                    : 'fruit_basket';
-            game.events.emit('themeChange', gameOptions.theme);
-            optionChanged = true;
-        } else if (elem.classList.contains(CONTROLS_SETTING_NAME)) {
-            gameOptions.controls =
-                gameOptions.controls === 'tap' ? 'move' : 'tap';
-            game.events.emit('controlsChange', gameOptions.controls);
-            optionChanged = true;
-        }
-        if (optionChanged) {
-            saveGameOptions(gameOptions);
-            updateToggleLabels();
-        }
-    });
-});
-
-// Paints the currently-active language button — called alongside
-// updateToggleLabels() at the same three points (initial load, after a
-// manual pick, and on every 'languageChanged' event).
-function updateLanguageButtonsActiveState(): void {
-    const current = getCurrentLanguage();
-    document
-        .querySelectorAll<HTMLButtonElement>('.language-option')
-        .forEach((btn) => {
-            btn.classList.toggle('active', btn.dataset.lang === current);
-        });
-}
-
-document
-    .querySelectorAll<HTMLButtonElement>('.language-option')
-    .forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const language = btn.dataset.lang as SupportedLanguage;
-            // Persists immediately and wins over IP detection from here on
-            // — see setLanguage()'s own comment in i18n/index.ts.
-            setLanguage(language);
-            btn.blur();
-        });
-    });
-
 // Everything above only *registers* click handlers — none of them call
 // t() until a user actually clicks something, by which point i18nReady
-// has long since resolved (bundled JSON, no network wait). These three
-// calls are the ones that need it immediately: painting real translated
-// text into the DOM the moment it's known, then keeping it in sync with
-// whatever changes later (a manual pick, or IP detection resolving for a
-// first-time visitor).
+// has long since resolved (bundled JSON, no network wait). translateDom()
+// is what needs it immediately: painting real translated text into the
+// DOM the moment it's known (the landscape-orientation overlay, dialog
+// templates), then keeping it in sync with whatever changes later (a
+// manual language pick from MenuScene's chips, or IP detection resolving
+// for a first-time visitor).
 void i18nReady.then(() => {
     translateDom();
-    updateToggleLabels();
-    updateLanguageButtonsActiveState();
-
     onLanguageChanged(() => {
         translateDom();
-        updateToggleLabels();
-        updateLanguageButtonsActiveState();
     });
 });
 
