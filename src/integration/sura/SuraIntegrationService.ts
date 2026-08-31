@@ -9,6 +9,7 @@ import {
 } from "./SuraTypes";
 import { SURA_CONFIG, GAME_SLUG } from "./SuraRuntimeConfig";
 import { SuraBridge } from "./SuraBridge";
+import { saveGameState } from "../../storage";
 
 // ─── State machine (parent-submit flow) ──────────────────────────────────────
 //
@@ -216,7 +217,20 @@ export class SuraIntegrationService {
       gameId:     typeof p.gameId     === "string" ? p.gameId     : GAME_SLUG,
       apiBaseUrl: typeof p.apiBaseUrl === "string" ? p.apiBaseUrl : "",
       nickname:   typeof p.username   === "string" ? p.username   : undefined,
+      bestScore:  typeof p.bestScore  === "number" ? p.bestScore  : undefined,
     };
+
+    // Reconcile the local (per-device) record against the account's real
+    // best score. Only ever raises it, never lowers it — a missing/stale/
+    // zero remote value (older host not rolled out yet, no runs for this
+    // account yet) must not erase a real local win that hasn't round-
+    // tripped to the backend yet. gameState is the same global object
+    // MainScene/RankingScene read, mutated in place so both see the
+    // reconciled value whenever they're next consulted.
+    if (this.context.bestScore !== undefined && this.context.bestScore > gameState.highScore) {
+      gameState.highScore = this.context.bestScore;
+      saveGameState(gameState);
+    }
 
     // Acknowledge receipt of the context.
     this.bridge.sendToParent(SURA_MSG.SESSION_ACCEPTED, {
