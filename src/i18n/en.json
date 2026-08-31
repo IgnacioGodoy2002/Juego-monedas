@@ -2,7 +2,7 @@
     "menu": {
         "title": "Coin Kingdom",
         "play": "Play",
-        "settings": "Settings",
+        "howToPlay": "How to play",
         "ranking": "Ranking"
     },
     "ranking": {
