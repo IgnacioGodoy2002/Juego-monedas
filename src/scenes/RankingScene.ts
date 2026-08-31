@@ -6,22 +6,8 @@ import {
 } from '../ui/GoldButton';
 import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
 import { applyUniformDPRCameraFit, applyDPRToAllText } from '../util/HiDPI';
-
-// Mock leaderboard — Coin Kingdom's SURA integration is "parent-submit"
-// only (see SuraIntegrationService.ts): the game sends its own score to
-// the host but has no message to request back a real cross-player
-// ranking. This placeholder list stands in until/unless SURA adds that,
-// same approach as the sibling Pengu Rush project's own mock service.
-const MOCK_PLAYERS: { name: string; score: number }[] = [
-    { name: 'Fede_K', score: 4200 },
-    { name: 'Cami.R', score: 3150 },
-    { name: 'ElRey92', score: 2680 },
-    { name: 'Sofi_M', score: 2100 },
-    { name: 'Bruno.T', score: 1780 },
-    { name: 'Naty_G', score: 1500 },
-    { name: 'Lucas.V', score: 1290 },
-    { name: 'MoniOK', score: 980 },
-];
+import { getSuraService } from '../integration/sura/SuraIntegrationService';
+import { fetchLeaderboard, LeaderboardEntry } from '../services/LeaderboardService';
 
 const PANEL_MAX_WIDTH = 460;
 const PANEL_PADDING = 24;
@@ -66,12 +52,39 @@ export class RankingScene extends Phaser.Scene {
     private boundOnLanguageChanged = this.buildContent.bind(this);
     private boundOnResize = this.onResize.bind(this);
 
+    // Fetched once per scene creation and cached — onResize()/language
+    // changes rebuild the layout from this cached list rather than
+    // re-fetching. null while the request is still in flight (buildRows()
+    // then shows just the player's own row).
+    private leaderboardEntries: LeaderboardEntry[] | null = null;
+    private destroyed = false;
+
     constructor() {
         super({ key: 'RankingScene' });
     }
 
     create(): void {
+        this.destroyed = false;
         this.buildContent();
+
+        const suraService = (() => {
+            try {
+                return getSuraService();
+            } catch {
+                return null;
+            }
+        })();
+
+        fetchLeaderboard({
+            gameId: suraService?.getGameId(),
+            apiBaseUrl: suraService?.getApiBaseUrl(),
+        }).then((entries) => {
+            // The scene may have been torn down (Volver al menú) before the
+            // fetch resolved.
+            if (this.destroyed) return;
+            this.leaderboardEntries = entries;
+            this.buildContent();
+        });
 
         onLanguageChanged(this.boundOnLanguageChanged);
         this.scale.on('resize', this.boundOnResize);
@@ -79,6 +92,7 @@ export class RankingScene extends Phaser.Scene {
         applyDPRToAllText(this);
 
         this.events.once('shutdown', () => {
+            this.destroyed = true;
             offLanguageChanged(this.boundOnLanguageChanged);
             this.scale.off('resize', this.boundOnResize);
         });
@@ -221,19 +235,21 @@ export class RankingScene extends Phaser.Scene {
         this.elements.push(...backButton);
     }
 
-    // Sorts the mock leaderboard together with the player's own local
-    // high score (gameState.highScore, the same value HUDScene/MainScene
-    // already read/write — see storage/index.ts) into one ranked list.
+    // Merges the real (or mock-fallback) leaderboard with the player's own
+    // local high score (gameState.highScore, the same value HUDScene/
+    // MainScene already read/write — see storage/index.ts) into one ranked
+    // list. While the fetch is still in flight, leaderboardEntries is null
+    // and only the player's own row shows.
     private buildRows(): RankingRow[] {
         const you: RankingRow = {
             name: t('ranking.you'),
             score: gameState.highScore,
             isYou: true,
         };
-        const rows: RankingRow[] = [
-            ...MOCK_PLAYERS.map((p) => ({ ...p, isYou: false })),
-            you,
-        ];
+        const others: RankingRow[] = (this.leaderboardEntries ?? []).map(
+            (entry) => ({ name: entry.alias, score: entry.score, isYou: false })
+        );
+        const rows: RankingRow[] = [...others, you];
         rows.sort((a, b) => b.score - a.score);
         return rows;
     }

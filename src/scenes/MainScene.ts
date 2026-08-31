@@ -130,6 +130,11 @@ export class MainScene extends Phaser.Scene {
     private inDanger: boolean = false;
 
     private lastCollisionSoundTime: number = 0;
+
+    // Wall-clock timestamp of the first drop this session — sent to SURA
+    // alongside the score so its anti-cheat can bound score against elapsed
+    // time (same duration_ms field the other two games' GAME_COMPLETE send).
+    private sessionStartedAt: number | null = null;
     private bgm: Phaser.Sound.BaseSound;
 
     private nextFruit: OrbTier;
@@ -264,8 +269,11 @@ export class MainScene extends Phaser.Scene {
         });
         this.events.on('gameOver', () => {
             const sessionScore = this.registry.get('score');
+            const durationMs = this.sessionStartedAt !== null
+                ? Date.now() - this.sessionStartedAt
+                : undefined;
             try {
-                void getSuraService().completeGameSession({ score: sessionScore });
+                void getSuraService().completeGameSession({ score: sessionScore, durationMs });
             } catch {
                 // Service not initialised — standalone fallback, ignore.
             }
@@ -380,6 +388,7 @@ export class MainScene extends Phaser.Scene {
                 // this block re-runs then too.
                 playBgmIfNeeded(this.bgm);
 
+                this.sessionStartedAt = Date.now();
                 try {
                     void getSuraService().startGameSession();
                 } catch {

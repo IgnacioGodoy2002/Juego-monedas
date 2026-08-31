@@ -16,8 +16,11 @@ const INBOUND_TYPES = new Set<string>([
  *
  * Responsibilities:
  *  - Register / remove a single "message" listener on window.
- *  - Validate origin and source before dispatching.
- *  - Validate the SURA envelope structure.
+ *  - Capture the host's origin from its first INIT_GAME (there is no
+ *    build-time SURA_PARENT_ORIGIN anymore — one build runs in every
+ *    environment, including the native app's WebView, which has no real
+ *    origin to hardcode in the first place).
+ *  - Validate origin (once known) and the envelope structure.
  *  - Route envelopes to registered per-type subscribers.
  *  - Send outbound messages to the parent window.
  *
@@ -29,6 +32,13 @@ export class SuraBridge {
   private readonly listeners = new Map<SuraMsgType, Set<BridgeListener>>();
   private boundOnMessage: ((event: MessageEvent) => void) | null = null;
   private active = false;
+
+  /**
+   * Set once, from the origin of the first valid INIT_GAME. Everything sent
+   * afterward (except MINIGAME_READY, which has to go out before this is
+   * known) targets this origin instead of "*".
+   */
+  private parentOrigin: string | null = null;
 
   constructor(config: SuraConfig) {
     this.config = config;
@@ -56,6 +66,7 @@ export class SuraBridge {
       this.boundOnMessage = null;
     }
     this.listeners.clear();
+    this.parentOrigin = null;
   }
 
   /**
@@ -76,41 +87,87 @@ export class SuraBridge {
   }
 
   /**
+   * MINIGAME_READY — the message that opens the handshake. It has to go out
+   * before the host's origin is known (that's derived from the host's own
+   * INIT_GAME, which hasn't arrived yet), so it's the one message that
+   * always targets "*". Carries nothing sensitive (game_id, version).
+   */
+  sendReady(payload: Record<string, unknown>): void {
+    if (this.config.mode === "standalone") return;
+    window.parent.postMessage({ type: SURA_MSG.READY, payload }, "*");
+  }
+
+  /**
    * Send an outbound message to the parent window.
    *
-   * Safe to call from any mode — no-op if not embedded or in standalone.
-   * Never uses "*" as the target origin.
+   * Safe to call from any mode — no-op if not embedded, or if the host's
+   * origin isn't known yet (i.e. before the first INIT_GAME).
    */
   sendToParent(type: SuraMsgType, payload: Record<string, unknown>): void {
     if (this.config.mode === "standalone") return;
-    if (!this.config.isEmbedded)           return;
-    if (!this.config.parentOrigin)         return;
+    if (!this.parentOrigin)                return;
 
-    const envelope: SuraEnvelope = {
-      source:  "sura-minigames",
-      version: 1,
-      type,
-      payload,
+    const envelope: SuraEnvelope = { type, payload };
+    window.parent.postMessage(envelope, this.parentOrigin);
+  }
+
+  /**
+   * Sends the game-complete result to the host. Unlike sendToParent, this is
+   * NOT enveloped — the host listens for a flat
+   * { type: 'GAME_COMPLETE', sessionId, score, provider, duration_ms? }
+   * message, not { type, payload }.
+   */
+  sendCompletion(input: {
+    sessionId:   string;
+    score:       number;
+    provider:    string;
+    durationMs?: number;
+  }): void {
+    if (this.config.mode === "standalone") return;
+    if (!this.parentOrigin)                return;
+
+    const message: Record<string, unknown> = {
+      type:      SURA_MSG.COMPLETED,
+      sessionId: input.sessionId,
+      score:     input.score,
+      provider:  input.provider,
     };
-    window.parent.postMessage(envelope, this.config.parentOrigin);
+    if (input.durationMs !== undefined) {
+      message.duration_ms = input.durationMs;
+    }
+    window.parent.postMessage(message, this.parentOrigin);
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
 
   private onMessage(event: MessageEvent): void {
-    // Reject messages from unexpected origins.
-    if (this.config.parentOrigin && event.origin !== this.config.parentOrigin) return;
+    // A synthetic MessageEvent built by hand (the native app's injected
+    // WebView bridge) has `source === null` — accept those. Reject anything
+    // that isn't null and also isn't the actual parent frame.
+    if (event.source !== null && event.source !== window.parent) return;
 
-    // Reject messages not from the direct parent window.
-    if (event.source !== window.parent) return;
-
-    // Validate envelope structure.
     if (!isValidEnvelope(event.data)) return;
-
     const envelope = event.data as SuraEnvelope;
-
-    // Silently ignore unknown types (other libraries, future extensions).
     if (!INBOUND_TYPES.has(envelope.type)) return;
+
+    if (envelope.type === SURA_MSG.INIT) {
+      // The first valid INIT_GAME defines who we answer to from here on.
+      // event.origin can legitimately be "" for some synthetic/native
+      // deliveries, or the literal string "null" for an opaque-origin host
+      // (e.g. a sandboxed iframe) — postMessage rejects "null" as an
+      // invalid targetOrigin outright, so both fall back to "*" rather than
+      // locking onto a value no real postMessage call will ever match.
+      if (this.parentOrigin === null) {
+        const origin = event.origin;
+        this.parentOrigin = origin && origin !== "null" ? origin : "*";
+      }
+    } else if (this.parentOrigin !== null && event.origin !== this.parentOrigin) {
+      // Once we know who the host is, reject anything claiming to be it from
+      // elsewhere. Doesn't apply before the host is known — there's nothing
+      // sensitive to protect yet, and rejecting would just make PAUSE/RESUME
+      // sent early impossible to ever receive.
+      return;
+    }
 
     const set = this.listeners.get(envelope.type);
     if (set) {
@@ -125,8 +182,6 @@ function isValidEnvelope(msg: unknown): msg is SuraEnvelope {
   if (typeof msg !== "object" || msg === null) return false;
   const m = msg as Record<string, unknown>;
   return (
-    m["source"]  === "sura-minigames" &&
-    m["version"] === 1 &&
     typeof m["type"]    === "string" &&
     typeof m["payload"] === "object" &&
     m["payload"] !== null
