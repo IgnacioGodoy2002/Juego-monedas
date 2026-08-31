@@ -57,12 +57,12 @@ module.exports = (env) => {
         },
         plugins: [
             new webpack.DefinePlugin({
+                // SURA mode/gameId/apiBaseUrl/parentOrigin are all decided at
+                // runtime now (window.parent/ReactNativeWebView detection +
+                // the host's own INIT_GAME payload) — one build works in
+                // every environment, so none of those need a build-time env
+                // var anymore. See src/integration/sura/SuraRuntimeConfig.ts.
                 'process.env.IS_DEBUG': JSON.stringify(isDebug),
-                'process.env.SURA_GAME_ID': JSON.stringify(process.env.SURA_GAME_ID || ''),
-                'process.env.SURA_GAME_VERSION': JSON.stringify(process.env.SURA_GAME_VERSION || ''),
-                'process.env.SURA_PARENT_ORIGIN': JSON.stringify(process.env.SURA_PARENT_ORIGIN || ''),
-                'process.env.SURA_API_BASE_URL': JSON.stringify(process.env.SURA_API_BASE_URL || ''),
-                'process.env.SURA_INTEGRATION_MODE': JSON.stringify(process.env.SURA_INTEGRATION_MODE || ''),
             }),
             new CopyWebpackPlugin({
                 patterns: [

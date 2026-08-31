@@ -7,23 +7,24 @@ import {
   type SuraServiceListener,
   type SuraSessionContext,
 } from "./SuraTypes";
-import { SURA_CONFIG } from "./SuraRuntimeConfig";
+import { SURA_CONFIG, GAME_SLUG } from "./SuraRuntimeConfig";
 import { SuraBridge } from "./SuraBridge";
 
 // ─── State machine (parent-submit flow) ──────────────────────────────────────
 //
 // disabled        → (standalone — no bridge, no transitions)
-// waiting-context → ready        (received valid SURA_MINIGAME_INIT)
-// ready           → playing      (startGameSession called — STARTED sent)
-// playing         → completed    (completeGameSession called — COMPLETED sent)
-// completed       → ready        (new SURA_MINIGAME_INIT received)
+// waiting-context → ready        (received valid INIT_GAME)
+// ready           → playing      (startGameSession called — MINIGAME_STARTED sent)
+// playing         → completed    (completeGameSession called — GAME_COMPLETE sent)
+// completed       → ready        (new INIT_GAME received)
 // waiting-context
 //   | ready
 //   | completed    → error       (invalid INIT payload received)
 //
 // Parent-submit model: the game communicates ONLY via postMessage.
-// No HTTP calls are made from the game. Score persistence is handled
-// by the SURA host after it receives MINIGAME_COMPLETED.
+// No HTTP calls are made from the game (aside from the public leaderboard
+// read). Score persistence is handled by the SURA host after it receives
+// GAME_COMPLETE.
 
 // ─── Singleton ────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,26 @@ export class SuraIntegrationService {
     return this.state;
   }
 
+  getSessionToken(): string | null {
+    return this.context?.token ?? null;
+  }
+
+  getNickname(): string | null {
+    return this.context?.nickname ?? null;
+  }
+
+  /**
+   * gameId comes from the host's own INIT_GAME payload — never hardcoded —
+   * so the same build works against local/staging/prod without a rebuild.
+   */
+  getGameId(): string | null {
+    return this.context?.gameId ?? null;
+  }
+
+  getApiBaseUrl(): string | null {
+    return this.context?.apiBaseUrl ?? null;
+  }
+
   /**
    * Called once from game.ts after Phaser initialises.
    * Attaches the postMessage bridge and notifies the host that the game
@@ -105,8 +126,8 @@ export class SuraIntegrationService {
 
     this.setState("playing");
     this.bridge.sendToParent(SURA_MSG.STARTED, {
-      session_id: this.context.sessionId,
-      game_id:    this.context.gameId,
+      sessionId: this.context.sessionId,
+      gameId:    this.context.gameId,
     });
     return true;
   }
@@ -114,26 +135,23 @@ export class SuraIntegrationService {
   /**
    * Called from MainScene's gameOver handler to report the game result.
    *
-   * SURA (parent-submit): sends MINIGAME_COMPLETED via postMessage.
-   * The host receives the score and is responsible for persisting it.
-   * No HTTP calls are made from the game.
+   * SURA (parent-submit): sends the flat GAME_COMPLETE message via
+   * postMessage. The host receives the score and is responsible for
+   * persisting it and paying any reward. No HTTP calls are made from the
+   * game. Note the flat contract has no room for isNewRecord/estimated
+   * points/etc — those fields exist only for local UI, they don't survive
+   * onto the wire (same as Pengu Rush / Joystick Pop).
    */
   async completeGameSession(result: GameResult): Promise<void> {
     if (SURA_CONFIG.mode === "standalone") return;
     if (this.state !== "playing") return;
     if (!this.context) return;
 
-    this.bridge.sendToParent(SURA_MSG.COMPLETED, {
-      session_id: this.context.sessionId,
-      game_id:    this.context.gameId,
+    this.bridge.sendCompletion({
+      sessionId:  this.context.sessionId,
       score:      result.score,
-      stats: {
-        isNewRecord:         result.isNewRecord,
-        // Local reward preview — SURA backend is the authority on actual points.
-        estimatedSuraPoints: result.estimatedSuraPoints,
-        rewardScoreUnit:     result.rewardScoreUnit,
-        rewardPointsPerUnit: result.rewardPointsPerUnit,
-      },
+      provider:   GAME_SLUG,
+      durationMs: result.durationMs,
     });
     this.setState("completed");
   }
@@ -161,10 +179,14 @@ export class SuraIntegrationService {
     this.bridge.on(SURA_MSG.RESUME, ()    => this.handleHostResume());
   }
 
+  /**
+   * MINIGAME_READY has to go out before the host's origin is known (that's
+   * derived from the host's own INIT_GAME, which hasn't arrived yet) — the
+   * bridge always sends it with target "*".
+   */
   private notifyReady(): void {
-    if (!SURA_CONFIG.isEmbedded) return;
-    this.bridge.sendToParent(SURA_MSG.READY, {
-      game_id: SURA_CONFIG.gameId,
+    this.bridge.sendReady({
+      game_id: GAME_SLUG,
       version: SURA_CONFIG.gameVersion,
     });
   }
@@ -175,32 +197,31 @@ export class SuraIntegrationService {
     ];
     if (!resettable.includes(this.state)) return;
 
-    // Validate required INIT fields.
+    // Validate required INIT fields. Real contract: camelCase, no player_id
+    // (the host identifies the player from the session token itself).
     const p = payload as Partial<InitPayload>;
-    const token      = typeof p.token      === "string" ? p.token      : null;
-    const session_id = typeof p.session_id === "string" ? p.session_id : null;
-    const player_id  = typeof p.player_id  === "number" ? p.player_id  : null;
-    const game_id    = typeof p.game_id    === "string" ? p.game_id    : null;
+    const token     = typeof p.token     === "string" ? p.token     : null;
+    const sessionId = typeof p.sessionId === "string" ? p.sessionId : null;
 
-    if (!token || !session_id || player_id === null || !game_id) {
+    if (!token || !sessionId) {
       this.setState("error");
-      this.bridge.sendToParent(SURA_MSG.ERROR, { message: "Invalid SURA_MINIGAME_INIT payload." });
+      this.bridge.sendToParent(SURA_MSG.ERROR, { message: "Invalid INIT_GAME payload." });
       return;
     }
 
     // Store context in memory only — never logged, never persisted.
     this.context = {
       token,
-      sessionId: session_id,
-      playerId:  player_id,
-      gameId:    game_id,
-      nickname:  typeof p.nickname === "string" ? p.nickname : undefined,
+      sessionId,
+      gameId:     typeof p.gameId     === "string" ? p.gameId     : GAME_SLUG,
+      apiBaseUrl: typeof p.apiBaseUrl === "string" ? p.apiBaseUrl : "",
+      nickname:   typeof p.username   === "string" ? p.username   : undefined,
     };
 
     // Acknowledge receipt of the context.
     this.bridge.sendToParent(SURA_MSG.SESSION_ACCEPTED, {
-      session_id,
-      game_id,
+      sessionId,
+      gameId: this.context.gameId,
     });
 
     // parent-submit: context is trusted as-is — no backend validation needed.
