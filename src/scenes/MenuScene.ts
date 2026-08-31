@@ -402,7 +402,7 @@ export class MenuScene extends Phaser.Scene {
         const settingsButton = this.createButton(
             centerX,
             settingsButtonY,
-            t('menu.settings'),
+            t('menu.howToPlay'),
             () => {
                 playBgmIfNeeded(this.bgm);
                 this.showMode('howToPlay');
@@ -812,7 +812,7 @@ export class MenuScene extends Phaser.Scene {
             this.mode === 'menu' ? t('menu.title') : t('howToPlay.heading')
         );
         this.playButtonText.setText(t('menu.play'));
-        this.settingsButtonText.setText(t('menu.settings'));
+        this.settingsButtonText.setText(t('menu.howToPlay'));
         this.rankingButtonText.setText(t('menu.ranking'));
         this.updateLanguageChipsActiveState();
         this.howToPlayObjectiveHeadingText.setText(
