@@ -33,6 +33,7 @@ export type SuraSessionContext = {
   gameId:     string;
   apiBaseUrl: string;
   nickname?:  string;
+  bestScore?: number;
 };
 
 // ─── Game result ──────────────────────────────────────────────────────────────
@@ -97,6 +98,9 @@ export type InitPayload = {
   referredByNickname?: string;
   gameId?:             string;
   apiBaseUrl?:         string;
+  // The player's own real best score, from sura-api — not the game's own
+  // localStorage, which is per-device and never synced to the account.
+  bestScore?:          number;
 };
 
 // ─── Events emitted by SuraIntegrationService to scene subscribers ────────────
