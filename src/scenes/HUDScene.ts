@@ -14,9 +14,22 @@ import {
 } from '../ui/GoldButton';
 import { t, onLanguageChanged, offLanguageChanged } from '../i18n';
 import { applyUniformDPRCameraFit, applyDPRToAllText } from '../util/HiDPI';
+import { getSafeAreaInsetTop } from '../util/SafeArea';
 
 const GAME_OVER_SCREEN_OFFSET: number = -200;
 const NEXT_ORB_PREVIEW_SIZE: number = 64;
+
+// Base (no-safe-area) Y anchors for the elements pinned to the real top
+// edge of the screen — unchanged from before the safe-area fix. this.
+// safeAreaTop (see create()/onResize()) is added on top of each of these,
+// so on a device with no notch/status-bar inset (safeAreaTop === 0, the
+// desktop/older-phone case) every one of these renders at exactly the same
+// Y as before this fix — no behavior change there.
+const SCORE_LABEL_Y = 10;
+const HIGH_SCORE_LABEL_Y = 30;
+const NEXT_FRUIT_TEXT_Y = 10;
+const NEXT_FRUIT_PANEL_Y = 44; // nextFruitGlow/nextFruitBack/pauseIcon share this row
+const NEXT_FRUIT_SPRITE_Y = 52;
 
 const PAUSE_ICON_RADIUS = 20;
 const PAUSE_OVERLAY_BACKDROP_ALPHA = 0.65;
@@ -73,6 +86,13 @@ function withLetterSpacing(value: string): string {
 
 export class HUDScene extends Phaser.Scene {
     private mainScene: Phaser.Scene;
+
+    // env(safe-area-inset-top) in real CSS px (see src/util/SafeArea.ts) —
+    // 0 on desktop/non-notched devices. Computed once in create() and
+    // re-read on every resize (rotation can change it), then added to the
+    // Y of every element anchored to the real top edge of the screen so
+    // none of them render underneath a notch/status bar.
+    private safeAreaTop: number = 0;
 
     private scoreLabelText: Phaser.GameObjects.Text;
     private highScoreLabelText: Phaser.GameObjects.Text;
@@ -138,6 +158,12 @@ export class HUDScene extends Phaser.Scene {
     }
 
     create(): void {
+        // Computed first, before anything below that reads it — every Y
+        // literal for the top-anchored elements in this method has
+        // this.safeAreaTop added on top of it. See this.safeAreaTop's own
+        // comment and src/util/SafeArea.ts for why.
+        this.safeAreaTop = getSafeAreaInsetTop();
+
         // 16px is this text's original, implicit Phaser default (no
         // fontSize was ever set here) — see HUD_TEXT_SCALE_REFERENCE_WIDTH's
         // comment for why that stopped being safe under Scale.RESIZE.
@@ -147,13 +173,13 @@ export class HUDScene extends Phaser.Scene {
         const scoreFontSize = this.scaledFontSize(16, 11, 20);
         this.scoreLabelText = this.add.text(
             10,
-            10,
+            SCORE_LABEL_Y + this.safeAreaTop,
             withLetterSpacing(t('hud.score')),
             { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
         );
         this.highScoreLabelText = this.add.text(
             10,
-            30,
+            HIGH_SCORE_LABEL_Y + this.safeAreaTop,
             withLetterSpacing(t('hud.highScore')),
             { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
         );
@@ -174,13 +200,13 @@ export class HUDScene extends Phaser.Scene {
             8;
         this.scoreText = this.add.text(
             scoreValueX,
-            10,
+            SCORE_LABEL_Y + this.safeAreaTop,
             withLetterSpacing('0'),
             { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
         );
         this.highscoreText = this.add.text(
             scoreValueX,
-            30,
+            HIGH_SCORE_LABEL_Y + this.safeAreaTop,
             withLetterSpacing('0'),
             { ...HUD_SCORE_TEXT_STYLE, fontSize: `${scoreFontSize}px` }
         );
@@ -327,7 +353,7 @@ export class HUDScene extends Phaser.Scene {
         // room top and bottom, instead of hanging down into the jar's neck.
         this.nextFruitGlow = this.add.rectangle(
             this.scale.width - 40,
-            44,
+            NEXT_FRUIT_PANEL_Y + this.safeAreaTop,
             96,
             96,
             GOLD_FILL_TOP,
@@ -341,7 +367,7 @@ export class HUDScene extends Phaser.Scene {
         // than a big full-screen panel does.
         this.nextFruitBack = this.add.rectangle(
             this.scale.width - 40,
-            44,
+            NEXT_FRUIT_PANEL_Y + this.safeAreaTop,
             80,
             80,
             PANEL_BG
@@ -354,7 +380,7 @@ export class HUDScene extends Phaser.Scene {
         // and the canvas edge, which is what was clipping it visually.
         this.nextFruitText = this.add.text(
             this.scale.width - 40,
-            10,
+            NEXT_FRUIT_TEXT_Y + this.safeAreaTop,
             t('hud.next'),
             {
                 fontFamily: GAME_FONT_FAMILY,
@@ -370,7 +396,7 @@ export class HUDScene extends Phaser.Scene {
         this.nextFruitSprite = new Phaser.GameObjects.Sprite(
             this,
             this.scale.width - 40,
-            52,
+            NEXT_FRUIT_SPRITE_Y + this.safeAreaTop,
             `chispa_${gameOptions.theme}`
         );
         this.nextFruitSprite.setDisplaySize(
@@ -385,7 +411,7 @@ export class HUDScene extends Phaser.Scene {
         // paused — frozen, but still rendering underneath — so it can't
         // run any of its own UI/input while the overlay is up. HUDScene
         // stays fully active throughout.
-        const pauseIconY = 44; // same header row as the Siguiente panel
+        const pauseIconY = NEXT_FRUIT_PANEL_Y + this.safeAreaTop; // same header row as the Siguiente panel
 
         // Drawn in LOCAL space (centered on the Graphics object's own
         // origin) instead of baking pauseIconX into every fillCircle/
@@ -550,6 +576,13 @@ export class HUDScene extends Phaser.Scene {
         if (gameSize.width === 0 || gameSize.height === 0) {
             return;
         }
+        // Re-read on every resize (not just once in create()) — a resize
+        // also fires on device rotation, and the safe-area inset that
+        // matters can move from one side to another (portrait's top inset
+        // becomes a left/right inset in landscape on some notched
+        // devices), so this needs to stay live rather than cached from
+        // first load.
+        this.safeAreaTop = getSafeAreaInsetTop();
         applyUniformDPRCameraFit(this);
         this.repositionHeader();
         this.rebuildPauseOverlayPreservingVisibility();
@@ -629,17 +662,44 @@ export class HUDScene extends Phaser.Scene {
     // screen's top edge (score/record stay put, they're pinned to the
     // top-LEFT corner which never moves) needs to re-derive its X from the
     // live this.scale.width on every resize, not just once in create().
-    // pauseIcon doesn't need its own line here — it's drawn in local space
-    // and repositioned via setPosition(), see create() — but every other
-    // element here is a plain x/y GameObject with no such shortcut.
+    // pauseIcon doesn't need its own X line here — it's drawn in local
+    // space and repositioned via setPosition(), see create() — but every
+    // other element here is a plain x/y GameObject with no such shortcut.
+    //
+    // Safe-area fix: also re-applies Y for every element anchored to the
+    // real top edge (score/record labels+values, the Siguiente panel, the
+    // pause icon), using the freshly re-read this.safeAreaTop (see
+    // onResize()) — these Y's are otherwise only ever set once in create(),
+    // but the inset itself can change across a resize (device rotation),
+    // so it has to be re-applied here too, not just at creation.
     private repositionHeader(): void {
         const rightEdgeX = this.scale.width - 40;
-        this.nextFruitGlow.x = rightEdgeX;
-        this.nextFruitBack.x = rightEdgeX;
-        this.nextFruitText.x = rightEdgeX;
-        this.nextFruitSprite.x = rightEdgeX;
-        this.pauseIcon.setX(this.scale.width / 2);
+        this.nextFruitGlow.setPosition(
+            rightEdgeX,
+            NEXT_FRUIT_PANEL_Y + this.safeAreaTop
+        );
+        this.nextFruitBack.setPosition(
+            rightEdgeX,
+            NEXT_FRUIT_PANEL_Y + this.safeAreaTop
+        );
+        this.nextFruitText.setPosition(
+            rightEdgeX,
+            NEXT_FRUIT_TEXT_Y + this.safeAreaTop
+        );
+        this.nextFruitSprite.setPosition(
+            rightEdgeX,
+            NEXT_FRUIT_SPRITE_Y + this.safeAreaTop
+        );
+        this.pauseIcon.setPosition(
+            this.scale.width / 2,
+            NEXT_FRUIT_PANEL_Y + this.safeAreaTop
+        );
         this.rightArrow.x = this.scale.width - this.rightArrow.displayWidth / 2;
+
+        this.scoreLabelText.setY(SCORE_LABEL_Y + this.safeAreaTop);
+        this.scoreText.setY(SCORE_LABEL_Y + this.safeAreaTop);
+        this.highScoreLabelText.setY(HIGH_SCORE_LABEL_Y + this.safeAreaTop);
+        this.highscoreText.setY(HIGH_SCORE_LABEL_Y + this.safeAreaTop);
     }
 
     // RESIZE migration, stage 4, block 2 — GoldButton's Graphics background
