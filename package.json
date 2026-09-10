@@ -1,6 +1,6 @@
 {
     "name": "coin-kingdom",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Coin fusion puzzle game made with Phaser 3 and TypeScript",
     "private": true,
     "license": "UNLICENSED",

@@ -161,6 +161,20 @@ svg {
 
 .top-menu-wrapper {
     position: absolute;
+    /* Plain CSS env() — unlike HUDScene's Phaser-canvas HUD (which needs
+       the "probe div" + getComputedStyle trick in SafeArea.ts because
+       env() can't be read from inside a <canvas>), this wrapper lives in
+       real DOM outside the canvas, so env(safe-area-inset-top) can be used
+       directly here. Two declarations: the plain `0` first is the
+       fallback for browsers that don't understand env() at all (the whole
+       declaration is dropped, so the earlier one wins); the env() one
+       overrides it everywhere env() is supported, including devices with
+       no notch, where the constant itself is just 0. Requires
+       viewport-fit=cover on the <meta viewport> tag (already set in
+       index.html) — without it Safari never lets the page extend under
+       the notch/status bar, and the inset always reads 0. */
+    top: 0;
+    top: env(safe-area-inset-top);
     width: 100%;
     display: flex;
     justify-content: center;
@@ -231,36 +245,48 @@ svg {
     }
 }
 
-/* Mobile-only: volume -/+ move out of the top-right icon row entirely,
-   under the Puntaje/Récord readout at the top-left instead. That row was
-   the most crowded part of the whole header on a narrow phone (gear, mute,
-   -, +, all squeezed against the reserved 88px "Siguiente" gap and the
-   pause button at center) — moving two of the four icons elsewhere gives
-   the remaining ones (gear, mute) real room, and there's genuinely empty
-   space under the score readout with nothing else there to compete with.
-   Desktop keeps the original single-row layout — this never had the
-   crowding problem BUTTON_MOBILE_BREAKPOINT (600, matching the same
-   breakpoint MenuScene.ts's button-shrink and how-to-play-panel-compact
-   logic uses) is meant to distinguish.
-   position:fixed (not absolute) anchors these directly to the viewport —
-   simpler than fighting .icon-bar's own right-anchored positioned-ancestor
-   context to reach back across the screen to the left side. The 54px top
-   clears Récord's own worst-case (20px, the max of HUD_SCORE font scaling)
-   row height starting at y=30. */
+/* Mobile-only: the whole icon group (mute + volume -/+) moves together to
+   a fixed bar centered at the very bottom of the viewport, instead of
+   living in the top-right corner. Two reasons, found while chasing a
+   real-device safe-area bug:
+   1. The top of a mobile screen is genuinely contested — HUDScene.ts's
+      Puntaje/Récord readout (top-left), pauseIcon (centered), and the
+      "Siguiente" panel (top-right, its 80px width is why the base rule
+      above reserves 88px on the right) already fill it edge to edge on a
+      narrow phone. An earlier attempt kept mute up top and only exiled
+      volume -/+ elsewhere to relieve the crowding, but that left the
+      group visually split across two corners, which reads as messy
+      ("no queda prolijo") rather than as one coherent control.
+   2. The bottom of the screen has nothing else on it in this game: the
+      leftArrow/rightArrow move-controls HUDScene.ts adds for
+      gameOptions.controls === 'move' sit at PLAY_AREA_CENTER_Y + 50 (mid
+      board, not bottom-anchored), and the pause/game-over overlay buttons
+      (buildPauseOverlay()/buildGameOverOverlay()) top out around
+      centerY + 90 — comfortably above the real bottom edge on any phone
+      aspect ratio. That makes the bottom the uncontested spot to group
+      all three icons together.
+   position:fixed anchors the whole .icon-bar directly to the viewport,
+   overriding its default position:absolute/right:88px from the base rule
+   above (that reservation is only relevant to the top-right layout).
+   bottom uses the same fallback-then-env() pair as .top-menu-wrapper's
+   top, so the group clears the home-indicator safe area on notched
+   phones without invading it, while sitting a plain 14px up on phones
+   with no bottom inset at all.
+   Desktop (above this breakpoint) keeps the original top-right layout —
+   it never had the crowding or safe-area problem; BUTTON_MOBILE_BREAKPOINT
+   (600, matching the same breakpoint MenuScene.ts's button-shrink and
+   how-to-play-panel-compact logic uses) is meant to distinguish exactly
+   that. */
 @media (max-width: 600px) {
-    .top-menu > .icon-bar > .volume-down-link,
-    .top-menu > .icon-bar > .volume-up-link {
+    .top-menu > .icon-bar {
         position: fixed;
-        top: 54px;
-        margin-right: 0;
-    }
-
-    .top-menu > .icon-bar > .volume-down-link {
-        left: 10px;
-    }
-
-    .top-menu > .icon-bar > .volume-up-link {
-        left: 34px;
+        top: auto;
+        right: auto;
+        bottom: 14px;
+        bottom: calc(14px + env(safe-area-inset-bottom));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
     }
 }
 
