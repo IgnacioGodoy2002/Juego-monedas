@@ -245,48 +245,28 @@ svg {
     }
 }
 
-/* Mobile-only: the whole icon group (mute + volume -/+) moves together to
-   a fixed bar centered at the very bottom of the viewport, instead of
-   living in the top-right corner. Two reasons, found while chasing a
-   real-device safe-area bug:
-   1. The top of a mobile screen is genuinely contested — HUDScene.ts's
-      Puntaje/Récord readout (top-left), pauseIcon (centered), and the
-      "Siguiente" panel (top-right, its 80px width is why the base rule
-      above reserves 88px on the right) already fill it edge to edge on a
-      narrow phone. An earlier attempt kept mute up top and only exiled
-      volume -/+ elsewhere to relieve the crowding, but that left the
-      group visually split across two corners, which reads as messy
-      ("no queda prolijo") rather than as one coherent control.
-   2. The bottom of the screen has nothing else on it in this game: the
-      leftArrow/rightArrow move-controls HUDScene.ts adds for
-      gameOptions.controls === 'move' sit at PLAY_AREA_CENTER_Y + 50 (mid
-      board, not bottom-anchored), and the pause/game-over overlay buttons
-      (buildPauseOverlay()/buildGameOverOverlay()) top out around
-      centerY + 90 — comfortably above the real bottom edge on any phone
-      aspect ratio. That makes the bottom the uncontested spot to group
-      all three icons together.
-   position:fixed anchors the whole .icon-bar directly to the viewport,
-   overriding its default position:absolute/right:88px from the base rule
-   above (that reservation is only relevant to the top-right layout).
-   bottom uses the same fallback-then-env() pair as .top-menu-wrapper's
-   top, so the group clears the home-indicator safe area on notched
-   phones without invading it, while sitting a plain 14px up on phones
-   with no bottom inset at all.
-   Desktop (above this breakpoint) keeps the original top-right layout —
-   it never had the crowding or safe-area problem; BUTTON_MOBILE_BREAKPOINT
-   (600, matching the same breakpoint MenuScene.ts's button-shrink and
-   how-to-play-panel-compact logic uses) is meant to distinguish exactly
-   that. */
+/* Mobile-only: the whole icon group (mute + volume -/+) moves together,
+   staying as one cluster, to just below the Puntaje/Récord readout at the
+   top-left — first tried anchored to the bottom of the screen instead, but
+   that read as a stray floating control with nothing near it, so it moved
+   here instead, directly under the score it's visually associated with.
+   The top-right corner is where these icons live on desktop, but on a
+   narrow phone that corner is already taken by the "Siguiente" panel (the
+   88px reservation in the base rule above) and competes with the
+   centered pauseIcon — grouping under the score avoids all of that
+   without needing a second env() calc: .top-menu-wrapper above already
+   shifted the whole nav down by env(safe-area-inset-top), so `top: 54px`
+   here is relative to .top-menu's own (already safe-area-adjusted) top
+   edge, same as HUDScene.ts's own Récord line sits at y=30 with room to
+   spare before 54px. `left: 10px` matches HUDScene.ts's scoreLabelText x
+   offset so the group visually lines up under the score column instead of
+   under a different part of the header. */
 @media (max-width: 600px) {
     .top-menu > .icon-bar {
-        position: fixed;
-        top: auto;
+        position: absolute;
+        top: 54px;
+        left: 10px;
         right: auto;
-        bottom: 14px;
-        bottom: calc(14px + env(safe-area-inset-bottom));
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 100;
     }
 }
 
