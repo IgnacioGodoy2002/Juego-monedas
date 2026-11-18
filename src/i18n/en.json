@@ -17,7 +17,7 @@
         "newRecord": "New record!",
         "win": "You reached the Supernova! Amazing!\nKeep it up!",
         "chainReaction": "Chain reaction! +{{points}} points",
-        "tapToPlay": "Tap to drop a coin",
+        "tapToPlay": "Move to start playing",
         "next": "Next",
         "playAgain": "Play again"
     },
@@ -42,7 +42,7 @@
         "objectiveHeading": "Objective",
         "intro": "Merge coins in order to get the GG.",
         "controlsHeading": "Controls",
-        "controlsBody": "Tap or click to drop a coin. Move it before dropping to choose where it lands.",
+        "controlsBody": "Coins fall on their own. Move them with A/D (or the arrow keys) on desktop, or by dragging your finger on mobile.",
         "chain": "Copper -> Bronze -> Silver -> Gold -> Ruby -> Amethyst -> Platinum -> Emerald -> Queen -> Sapphire -> Diamond -> GG.",
         "chainAriaLabel": "Coin hierarchy",
         "specialRuleHeading": "Chain reaction",

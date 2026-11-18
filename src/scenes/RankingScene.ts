@@ -240,18 +240,60 @@ export class RankingScene extends Phaser.Scene {
     // MainScene already read/write — see storage/index.ts) into one ranked
     // list. While the fetch is still in flight, leaderboardEntries is null
     // and only the player's own row shows.
+    //
+    // The player's own account can already be present in the fetched
+    // leaderboard, under their real SURA nickname (SuraIntegrationService
+    // syncs the host's bestScore into gameState.highScore — see its
+    // startGameSession/context handling — so the two scores end up
+    // identical). Blindly appending a second synthetic "(vos)" row on top
+    // of that then shows the same account twice with the same score. Match
+    // by nickname first and just relabel/highlight that existing row
+    // instead — only fall back to adding a separate row when the player's
+    // nickname isn't in the fetched list at all (e.g. standalone mode, or
+    // they're outside the top 12).
     private buildRows(): RankingRow[] {
-        const you: RankingRow = {
-            name: t('ranking.you'),
-            score: gameState.highScore,
-            isYou: true,
-        };
         const others: RankingRow[] = (this.leaderboardEntries ?? []).map(
             (entry) => ({ name: entry.alias, score: entry.score, isYou: false })
         );
-        const rows: RankingRow[] = [...others, you];
+
+        const nickname = this.getOwnNickname();
+        const ownIndex = nickname
+            ? others.findIndex(
+                  (row) =>
+                      row.name.trim().toLowerCase() ===
+                      nickname.trim().toLowerCase()
+              )
+            : -1;
+
+        let rows: RankingRow[];
+        if (ownIndex !== -1) {
+            rows = others.map((row, i) =>
+                i === ownIndex
+                    ? { ...row, name: t('ranking.you'), isYou: true }
+                    : row
+            );
+        } else {
+            rows = [
+                ...others,
+                {
+                    name: t('ranking.you'),
+                    score: gameState.highScore,
+                    isYou: true,
+                },
+            ];
+        }
         rows.sort((a, b) => b.score - a.score);
         return rows;
+    }
+
+    private getOwnNickname(): string | null {
+        try {
+            return getSuraService().getNickname();
+        } catch {
+            // Service not initialised — standalone fallback, no nickname to
+            // match against.
+            return null;
+        }
     }
 
     private buildMedalIcon(

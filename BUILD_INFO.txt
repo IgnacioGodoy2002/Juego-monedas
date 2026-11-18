@@ -1,0 +1,112 @@
+Coin Kingdom — Build Info
+=========================
+
+Versión:   0.1.7
+Fecha:     2026-10-23
+Fuente:    build 0.1.5 + UN solo cambio: la fusión de monedas superpuestas.
+
+Modo:      RUNTIME (mismo patrón que las builds 0.1.4/0.1.5) — nada se
+           decide en build time, un solo build sirve en cualquier entorno
+           (localhost/staging/prod/app nativa).
+
+Qué es esta build
+-----------------
+Es la 0.1.5 con el arreglo de superposición de monedas, y nada más.
+
+Toda la tanda de cambios de integración que se probó en la 0.1.6 (puentes
+nativos para el WebView, payload plano, campos en snake_case, estados de
+error en el ranking, timeouts de handshake y de fetch, recorte de filas del
+panel) quedó REVERTIDA: el ranking volvió a comportarse exactamente como en
+la 0.1.5, que es lo pedido. Los archivos se restauraron a su contenido
+original, verificado por conteo de líneas:
+
+  src/integration/sura/SuraBridge.ts              189 líneas
+  src/integration/sura/SuraIntegrationService.ts  264
+  src/integration/sura/SuraRuntimeConfig.ts        46
+  src/integration/sura/SuraTypes.ts               113
+  src/services/LeaderboardService.ts               74
+  src/scenes/RankingScene.ts                      329
+  src/i18n/{es,en,pt}.json    bloque "ranking" de vuelta a title/you/back
+
+El único archivo que NO se revirtió es src/scenes/MainScene.ts, que es
+donde vive el arreglo de abajo.
+
+Consecuencia conocida y aceptada: en la app nativa el ranking vuelve a
+mostrar la lista de preview en lugar de datos reales, y la recompensa
+vuelve a depender de que el handshake funcione como funcionaba antes. Es
+el comportamiento de la 0.1.5.
+
+El cambio de esta versión
+-------------------------
+src/scenes/MainScene.ts — monedas que se superponían y no se fusionaban
+aunque fueran de la misma rareza.
+
+La fusión dependía sólo de 'collisionstart', que Matter emite UNA sola vez:
+cuando el par de cuerpos se activa. Un par que ya se está tocando no lo
+vuelve a emitir nunca. Dos caminos llevaban a un par de la misma rareza
+superpuesto y sin fusionar:
+
+  - La moneda que se está apuntando es static + sensor mientras cuelga del
+    lanzador (ver spawnActiveFruit). Sus contactos de sensor se descartan
+    en el handler, y cuando releasePair() la vuelve dinámica el par ya está
+    activo en la tabla de Matter, así que el evento no llega nunca más.
+    Por eso el bug aparecía "llegado un momento": necesita que la pila
+    crezca hasta el lanzador.
+  - resolveCoinOverlaps() separa las monedas hundidas moviéndolas con la
+    transformada de Matter, que tampoco reactiva un par ya activo.
+
+La fusión se extrajo a tryMergeFruits() y ahora es alcanzable desde dos
+lados: el evento (camino normal, dispara en el instante en que dos monedas
+se tocan) y un escaneo por frame dentro de resolveCoinOverlaps(), que
+fusiona los pares de la misma rareza en contacto en lugar de separarlos.
+El umbral del escaneo es el contacto simple, no el slack de separación.
+Supernova queda excluida (no tiene tier superior; sus clusters los maneja
+el grafo de contactos) y por eso sigue separándose. Las fusiones se
+acumulan y se aplican al terminar el escaneo, porque destruyen las dos
+monedas y agregan una tercera.
+
+Los tres arreglos de la 0.1.5 (iteraciones del solver, punto medio de la
+moneda fusionada, resolveCoinOverlaps) siguen en pie — este cierra el caso
+que ninguno de ellos cubría.
+
+Salida de esta build:
+  dist/                        compilado por webpack (npm run build)
+  coin-kingdom-build-0.1.7/    copia de dist/ lista para publicar
+  coin-kingdom-build-0.1.7.zip el mismo contenido, archivos en la raíz
+                               del ZIP (sin carpeta contenedora)
+
+Contenido: index.html, index.css, bundle.js, bundle.js.LICENSE.txt,
+           favicon.ico, icon128.png, icon152.png, manifest.json y assets/
+           (coins, img, jar, bg, sounds). 64 entradas, 32,08 MB.
+
+Cómo usar esta build:
+  - Servir coin-kingdom-build-0.1.7/ (o dist/) con cualquier servidor
+    HTTP estático:  python -m http.server 8080
+  - Abierta suelta en una pestaña (no embebida) sigue funcionando en
+    modo standalone, con el leaderboard de preview.
+
+Validación hecha al armarla:
+  npx tsc --noEmit                     OK (sin errores en src/; sólo el
+                                       ruido preexistente de @types/node)
+  npm run build                        OK (solo warnings de tamaño)
+  node tests/pair-mechanics.cjs        PASS
+  servida por HTTP (127.0.0.1:8099): index.html, bundle.js, index.css,
+  manifest.json, favicon.ico y assets (jar/coins/bg/sounds) responden 200;
+  ninguna ruta de asset referenciada por el bundle falta en la carpeta.
+  ZIP verificado con separadores "/", archivos en la raíz y testzip() sin
+  CRC roto.
+
+  Verificación de que la reversión quedó completa, sobre el bundle
+  compilado:
+    presentes   tryMergeFruits, resolveCoinOverlaps  (el arreglo que queda)
+    ausentes    getHostStringTransport, messageHandlers, session_id,
+                api_base_url, display_name, AbortController y el texto
+                "No se pudo cargar el ranking"       (todo lo revertido)
+    de vuelta   la lista de preview del leaderboard
+    intacto     INIT_GAME / MINIGAME_READY / GAME_COMPLETE /
+                ReactNativeWebView, igual que en la 0.1.5
+  bundle.js: 2.007.810 bytes contra 2.007.312 de la 0.1.5 — 498 bytes de
+  diferencia, consistente con que el único cambio sea el de MainScene.
+
+  tests/sura-integration.cjs (agregado en la 0.1.6) se eliminó junto con
+  el código que probaba.

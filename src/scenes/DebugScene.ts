@@ -44,13 +44,6 @@ export class DebugScene extends Phaser.Scene {
         this.y += 32;
         this.debugTextGroup.add(instructionsText, true);
         this.addKey('highscore');
-        this.addKey('xspeed');
-        this.addKey('yspeed');
-        this.addKey('x');
-        this.addKey('y');
-        this.addKey('moveLeftHeld');
-        this.addKey('moveRightHeld');
-        this.addKey('heldDelta');
         this.addKey('mergeDisabled');
         this.addKey('heldNextFruit');
         const controls = [

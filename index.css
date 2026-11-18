@@ -665,3 +665,41 @@ body.snow .footer > .snow-theme.credits {
 body a > .version-number {
     pointer-events: initial;
 }
+/* Pair mockup: one responsive viewport shared by the menu and play screen. */
+.game-wrapper{position:fixed;inset:0 auto 0 50%;transform:translateX(-50%);width:min(100%,720px);height:100dvh;overflow:hidden}
+.game.pane{height:calc(100% - 78px - env(safe-area-inset-bottom));position:absolute;inset:0 0 auto;width:100%}
+.top-menu-wrapper{z-index:5;pointer-events:none}.top-menu{pointer-events:auto}.landscape-overlay{display:none!important}
+.coin-menu{position:absolute;inset:0;z-index:20;background:linear-gradient(150deg,#182d40ed,#101c31e8);color:#fff3d4;overflow:auto}
+.coin-menu-shell{box-sizing:border-box;max-width:620px;min-height:100%;margin:auto;padding:max(18px,env(safe-area-inset-top)) 28px max(18px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center}
+.coin-eyebrow{font-size:11px;letter-spacing:3px;color:#e5ba62}.coin-menu h1{margin:0;font-size:38px;line-height:.94;letter-spacing:1px;color:#ffe59a;text-shadow:0 3px #895d25,0 6px #09192b}.coin-menu h1 strong{display:block;font-size:64px}.coin-subtitle{margin:0;color:#b6c7d3;font-size:15px}
+.coin-showcase{position:relative;width:100%;height:250px;flex:1;min-height:140px;max-height:340px}.coin-stage{position:absolute;inset:-10px 0 10px}.coin-stage canvas{width:100%!important;height:100%!important}.coin-stage img{height:100%;max-width:100%;object-fit:contain}.coin-character-name{position:absolute;bottom:0;left:0;right:0;font-size:24px;color:#ffdf8a}
+.coin-character-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%}.coin-menu button{cursor:pointer;font-family:inherit}.coin-character-cards button{min-width:0;position:relative;border:1px solid #608399;background:#273f55;color:#c6d4df;border-radius:13px;height:105px;padding:0 4px 9px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;font-size:15px;box-shadow:0 4px #0a1727}.coin-character-cards img{position:absolute;height:83px;width:90px;object-fit:contain;bottom:24px;max-width:120%}.coin-character-cards button[aria-pressed=true]{border:2px solid #ffe096;background:#475949;color:#ffe8a8;box-shadow:0 4px #936d2d}
+.coin-play{width:100%;border:1px solid #ffe6b2;border-radius:13px;background:linear-gradient(#ffe798,#eab54b);color:#38281c;padding:13px;font-size:26px;font-weight:700;box-shadow:0 5px #856329}.coin-rule{margin:3px 0;color:#a7bbcc;font-size:14px;line-height:1.4}.coin-menu-actions{display:flex;gap:12px;width:100%}.coin-menu-actions button{flex:1;border:1px solid #49667b;background:#1d3247;color:#cbd9e2;border-radius:10px;padding:10px;font-size:14px}
+.coin-game-ui{position:absolute;inset:0;pointer-events:none;z-index:4}.coin-launcher{position:absolute;pointer-events:none}.coin-launcher canvas,.coin-launcher img{width:100%!important;height:100%!important;object-fit:contain}.coin-next{position:absolute;top:78px;right:15px;background:#152638e8;border:1px solid #cda45488;border-radius:12px;padding:7px 9px;color:#ffe0a4;text-align:center}.coin-next small{font-size:9px;letter-spacing:.5px}.coin-next div{display:flex;justify-content:center}.coin-next img{height:36px;width:36px;object-fit:contain}
+.coin-controls{box-sizing:border-box;position:absolute;bottom:0;left:0;right:0;height:calc(78px + env(safe-area-inset-bottom));padding:10px 18px calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr 1.2fr 1.2fr;gap:10px;background:linear-gradient(#10233688,#102336f5);pointer-events:auto;touch-action:none}.coin-controls button{border:1px solid #8babb778;border-radius:12px;background:linear-gradient(#355269,#22394f);color:#e8f2f5;font-family:inherit;font-size:25px;line-height:1;touch-action:none;box-shadow:0 3px #0a1929;cursor:pointer}.coin-controls button:nth-child(3){background:linear-gradient(#f7d574,#d7a241);color:#3b2c1a;border-color:#ffe3a2}.coin-controls button small{display:block;font-size:10px;margin-top:3px}.coin-controls button:active{transform:translateY(2px)}.coin-controls button:disabled{opacity:.35}.coin-help-dialog{position:absolute;inset:0;z-index:22;background:#07121ccc;display:flex;align-items:center;justify-content:center;padding:20px}.coin-help-dialog>div{max-width:430px;border:1px solid #bd9551;background:#1c3044;padding:22px;border-radius:20px;line-height:1.5;text-align:left}.coin-help-dialog button{width:100%;padding:12px;border:0;border-radius:9px;background:#f0cb70;color:#342719;font-size:17px}
+@media(max-width:600px){.game-wrapper{width:100%}.coin-menu-shell{padding-left:18px;padding-right:18px;gap:11px}.coin-menu h1{font-size:30px}.coin-menu h1 strong{font-size:49px}.coin-character-cards{gap:7px}.coin-character-cards button{font-size:13px;height:88px}.coin-character-cards img{height:67px;width:74px;bottom:23px}.coin-showcase{height:200px}.coin-next{top:75px;right:9px;padding:5px}.coin-next img{height:27px;width:27px}.coin-next small{font-size:8px}.coin-controls{padding-left:12px;padding-right:12px;gap:8px}}
+@media(max-height:690px){.coin-showcase{height:145px;min-height:100px}.coin-menu-shell{gap:8px}.coin-menu h1 strong{font-size:42px}.coin-menu h1{font-size:25px}.coin-rule{font-size:12px}.coin-character-cards button{height:78px}.coin-character-cards img{height:58px}.coin-play{padding:10px;font-size:23px}}
+@media(min-width:900px){.game-wrapper{width:min(65vw,720px)}.coin-menu-shell{padding-left:44px;padding-right:44px}.coin-controls{padding-left:55px;padding-right:55px}.coin-menu h1 strong{font-size:72px}}
+
+#landscape-overlay{display:none!important}.coin-game-ui.is-paused .coin-launcher,.coin-game-ui.is-paused .coin-next{visibility:hidden}
+
+/* Character cards use portraits rendered from this game's unmounted rigs. */
+.coin-card-portrait{position:absolute;inset:-8px 0 23px;display:flex;align-items:center;justify-content:center}
+.coin-character-cards .coin-card-portrait img{position:static;width:100%;height:100%;max-width:100%;object-fit:contain}
+.coin-card-portrait b{font-size:37px;color:#ffdf8a}.coin-character-fallback{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:22px;color:#ffdf8a}
+.coin-showcase{height:230px;min-height:155px}.coin-stage{inset:-3px 0 22px}
+.coin-menu-shell{gap:12px}.coin-character-cards button{height:112px}
+@media(max-width:600px){.coin-character-cards button{height:94px}.coin-showcase{height:205px;min-height:140px}.coin-menu-shell{gap:10px}}
+@media(max-height:690px){.coin-showcase{height:130px;min-height:110px}.coin-character-cards button{height:81px}.coin-menu-shell{gap:8px}}
+
+.coin-next{top:calc(78px + env(safe-area-inset-top))}@media(max-width:600px){.coin-next{top:calc(75px + env(safe-area-inset-top))}}
+
+/* One integrated menu, with an opaque panel and no legacy UI behind it. */
+.coin-menu{background:radial-gradient(ellipse at 50% 32%,#2d485c 0%,#1b3043 55%,#102034 100%)}
+body[data-coin-screen=menu] .top-menu-wrapper{display:none}
+.coin-controls{display:flex;justify-content:center;align-items:flex-start;background:transparent;pointer-events:none;padding:8px 12px calc(8px + env(safe-area-inset-bottom))}
+.coin-controls button{pointer-events:auto;width:132px;height:57px;background:linear-gradient(#ffe193,#e6b54d);color:#382b1d;border:1px solid #ffe7ad;border-radius:16px;font-size:28px;box-shadow:0 4px #80612e}
+.coin-controls button small{display:inline;font-size:15px;margin-left:8px}
+.coin-menu-shell{height:100%;min-height:620px;gap:12px;padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+.coin-showcase{flex:1;min-height:140px;max-height:360px;height:auto}
+@media(max-height:690px){.coin-menu-shell{min-height:540px;padding-top:max(12px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom));gap:8px}.coin-showcase{min-height:105px}.coin-rule{font-size:11px}}

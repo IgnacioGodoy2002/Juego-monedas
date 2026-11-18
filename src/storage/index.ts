@@ -1,10 +1,9 @@
-import { GameControl, GameTheme } from '../types';
+import { GameTheme } from '../types';
 
 const GAME_OPTIONS_KEY = 'game_options';
 const GAME_STATE_KEY = 'game_state';
 
 export interface GameOptions {
-    controls: GameControl;
     theme: GameTheme;
     musicVolume: number;
 }
@@ -16,7 +15,6 @@ export interface GameState {
 
 function createDefaultGameOptions(): GameOptions {
     return {
-        controls: 'tap',
         theme: 'fruit_basket',
         musicVolume: 0.4,
     };

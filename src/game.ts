@@ -100,6 +100,23 @@ window.onload = () => {
                 // (hard-capped by the jar's size) that the perf case for
                 // sleeping doesn't really apply here.
                 enableSleeping: false,
+                // Matter's defaults (6/4/2) are tuned for sparse scenes.
+                // This board is the opposite: a dense pile of circles with
+                // a ~28:1 mass ratio between the smallest coin (r~25px,
+                // mass ~2) and a Supernova (r~135px, mass ~57), all resting
+                // on each other inside a narrow jar. With only 6 position
+                // iterations the solver runs out of passes before it has
+                // pushed every contact apart, so a small coin pinched
+                // between two big ones stays visibly sunk into them for as
+                // long as the pile holds — the overlap players were seeing.
+                // Raising the iteration counts is the actual fix for that;
+                // MainScene's resolveCoinOverlaps() only cleans up whatever
+                // residue is still left after this. The cost is linear and
+                // the body count here is hard-capped by the jar's size
+                // (tens of coins, not thousands), so it's affordable.
+                positionIterations: 16,
+                velocityIterations: 10,
+                constraintIterations: 4,
             },
         },
     };

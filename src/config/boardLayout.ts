@@ -4,7 +4,7 @@
 // the jar's neck (above) and rounded base (below). Keeping these numbers
 // here (instead of scattered across MainScene.ts/HUDScene.ts/game.ts) means
 // there's one place to nudge when the real jar art gets tuned.
-export const PLAY_AREA_WIDTH = 580;
+export const PLAY_AREA_WIDTH = Math.round(Math.max(520, Math.min(860, Math.min(window.innerWidth, 720) / Math.max(360, window.innerHeight - 78) * 1362)));
 export const PLAY_AREA_HEIGHT = 800;
 
 // Height of the opaque HUD header strip (HUDScene's backdrop fillRect,
@@ -24,7 +24,8 @@ const JAR_NECK_HEIGHT = 232;
 // rectangle starts exactly where the jar's straight body begins — the neck
 // has room to render completely below the header instead of being clipped
 // by it.
-export const PLAY_AREA_TOP_OFFSET = HEADER_HEIGHT + JAR_NECK_HEIGHT; // 322
+export const LAUNCHER_HEIGHT = 220;
+export const PLAY_AREA_TOP_OFFSET = HEADER_HEIGHT + LAUNCHER_HEIGHT + JAR_NECK_HEIGHT; // 322
 export const PLAY_AREA_BOTTOM_PADDING = 70;
 
 export const CANVAS_WIDTH = PLAY_AREA_WIDTH;

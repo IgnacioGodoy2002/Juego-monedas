@@ -104,8 +104,6 @@ export class HUDScene extends Phaser.Scene {
     private winText: Phaser.GameObjects.Text;
     private instructionText: Phaser.GameObjects.Text;
     private fingerIcon: Phaser.GameObjects.Image;
-    private leftArrow: Phaser.GameObjects.Image;
-    private rightArrow: Phaser.GameObjects.Image;
 
     private nextFruitGlow: Phaser.GameObjects.Rectangle;
     private nextFruitBack: Phaser.GameObjects.Rectangle;
@@ -135,10 +133,6 @@ export class HUDScene extends Phaser.Scene {
     private gameOverPlayAgainButtonText: Phaser.GameObjects.Text;
     private gameOverMenuButtonText: Phaser.GameObjects.Text;
 
-    // Same reasoning as MainScene.ts's boundOnControlsChange — this.game.
-    // events is global and outlives this scene, so the exact function
-    // reference needs to survive to be .off()'d on shutdown.
-    private boundOnControlsChange = this.onControlsChange.bind(this);
     private boundOnLanguageChanged = this.updateTranslatedTexts.bind(this);
     // RESIZE migration, stage 2 — placeholder only (see MainScene.ts's
     // boundOnResize for the full rationale). this.scale is the Game-wide
@@ -153,8 +147,6 @@ export class HUDScene extends Phaser.Scene {
 
     preload(): void {
         this.load.image('fingerIcon', './assets/img/tap.png');
-        this.load.image('leftArrow', './assets/img/LeftArrow.svg');
-        this.load.image('rightArrow', './assets/img/RightArrow.svg');
     }
 
     create(): void {
@@ -239,7 +231,6 @@ export class HUDScene extends Phaser.Scene {
             this.scene.setVisible(!isVisible, 'HUDScene');
         });
 
-        this.game.events.on('controlsChange', this.boundOnControlsChange);
         this.scale.on('resize', this.boundOnResize);
         // The very first 'resize' event of the whole session fires during
         // Phaser's own boot, before this scene has registered the listener
@@ -257,7 +248,6 @@ export class HUDScene extends Phaser.Scene {
         // MainScene's own emitter, and MainScene's returnToMenu() already
         // wipes that whole emitter via removeAllListeners() when it stops.
         this.events.on('shutdown', () => {
-            this.game.events.off('controlsChange', this.boundOnControlsChange);
             this.scale.off('resize', this.boundOnResize);
         });
 
@@ -304,47 +294,6 @@ export class HUDScene extends Phaser.Scene {
         this.fingerIcon.setOrigin(0.5);
         this.fingerIcon.setScale(0.2, 0.2);
         this.fingerIcon.setVisible(false);
-
-        this.leftArrow = this.add.image(
-            0,
-            PLAY_AREA_CENTER_Y + 50,
-            'leftArrow'
-        );
-        this.leftArrow.setOrigin(0.5);
-        this.leftArrow.setScale(0.1, 0.1);
-        this.leftArrow.x = this.leftArrow.displayWidth / 2;
-        this.leftArrow.setInteractive();
-        this.leftArrow.on('pointerdown', () => {
-            this.mainScene.events.emit('moveLeftStart');
-        });
-        this.leftArrow.on('pointerup', () => {
-            this.mainScene.events.emit('moveLeftStop');
-        });
-        this.leftArrow.on('pointerout', () => {
-            this.mainScene.events.emit('moveLeftStop');
-        });
-
-        this.rightArrow = this.add.image(
-            0,
-            PLAY_AREA_CENTER_Y + 50,
-            'rightArrow'
-        );
-        this.rightArrow.setOrigin(0.5);
-        this.rightArrow.setScale(0.1, 0.1);
-        this.rightArrow.x =
-            this.scale.width - this.rightArrow.displayWidth / 2;
-        this.rightArrow.setInteractive();
-        this.rightArrow.on('pointerdown', () => {
-            this.mainScene.events.emit('moveRightStart');
-        });
-        this.rightArrow.on('pointerup', () => {
-            this.mainScene.events.emit('moveRightStop');
-        });
-        this.rightArrow.on('pointerout', () => {
-            this.mainScene.events.emit('moveRightStop');
-        });
-
-        this.onControlsChange(gameOptions.controls);
 
         // Add the next orb backing glow — a soft halo in one of the orb tier
         // colors behind the panel, so it reads as part of the same palette
@@ -443,6 +392,7 @@ export class HUDScene extends Phaser.Scene {
             offLanguageChanged(this.boundOnLanguageChanged);
         });
 
+        this.nextFruitGlow.setVisible(false);this.nextFruitBack.setVisible(false);
         this.scene.bringToTop();
 
         // Last line of create() on purpose — every Text object this scene
@@ -551,16 +501,6 @@ export class HUDScene extends Phaser.Scene {
         this.time.delayedCall(1500, () => {
             this.chainReactionText.setVisible(false);
         });
-    }
-
-    onControlsChange(controls): void {
-        if (controls === 'move') {
-            this.leftArrow.setVisible(true);
-            this.rightArrow.setVisible(true);
-        } else {
-            this.leftArrow.setVisible(false);
-            this.rightArrow.setVisible(false);
-        }
     }
 
     private onResize(gameSize: Phaser.Structs.Size): void {
@@ -694,8 +634,6 @@ export class HUDScene extends Phaser.Scene {
             this.scale.width / 2,
             NEXT_FRUIT_PANEL_Y + this.safeAreaTop
         );
-        this.rightArrow.x = this.scale.width - this.rightArrow.displayWidth / 2;
-
         this.scoreLabelText.setY(SCORE_LABEL_Y + this.safeAreaTop);
         this.scoreText.setY(SCORE_LABEL_Y + this.safeAreaTop);
         this.highScoreLabelText.setY(HIGH_SCORE_LABEL_Y + this.safeAreaTop);
@@ -904,8 +842,8 @@ export class HUDScene extends Phaser.Scene {
             NEXT_ORB_PREVIEW_SIZE,
             NEXT_ORB_PREVIEW_SIZE
         );
-        this.nextFruitSprite.setVisible(true);
-        this.nextFruitText.setVisible(true);
+        this.nextFruitSprite.setVisible(false);
+        this.nextFruitText.setVisible(false);
     }
 
     private createOverlayButton(

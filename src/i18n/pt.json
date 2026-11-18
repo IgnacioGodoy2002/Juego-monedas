@@ -17,7 +17,7 @@
         "newRecord": "Novo recorde!",
         "win": "Você chegou à Supernova! Incrível!\nContinue assim!",
         "chainReaction": "Reação em cadeia! +{{points}} pontos",
-        "tapToPlay": "Toque para soltar uma moeda",
+        "tapToPlay": "Mova-se para começar a jogar",
         "next": "Próxima",
         "playAgain": "Jogar novamente"
     },
@@ -42,7 +42,7 @@
         "objectiveHeading": "Objetivo",
         "intro": "Funda moedas em ordem para obter o GG.",
         "controlsHeading": "Controles",
-        "controlsBody": "Toque ou clique para soltar uma moeda. Mova-a antes de soltar para escolher onde ela cai.",
+        "controlsBody": "As moedas caem sozinhas. Mova-as com A/D (ou as setas) no computador, ou arrastando o dedo no celular.",
         "chain": "Cobre -> Bronze -> Prata -> Ouro -> Rubi -> Ametista -> Platina -> Esmeralda -> Rainha -> Safira -> Diamante -> GG.",
         "chainAriaLabel": "Hierarquia de moedas",
         "specialRuleHeading": "Reação em cadeia",

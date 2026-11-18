@@ -7,10 +7,11 @@ module.exports = (env) => {
 
     return {
         entry: './src/game.ts',
-        mode: env.NODE_ENV === 'dev' ? 'development' : 'production',
+        mode: env?.NODE_ENV === 'dev' ? 'development' : 'production',
         output: {
             path: path.resolve(__dirname, 'dist'),
             filename: 'bundle.js',
+            clean: true,
         },
         module: {
             rules: [
@@ -49,6 +50,7 @@ module.exports = (env) => {
             // `require()` handles unambiguously.
             mainFields: ['browser', 'main'],
             alias: {
+                'three$': path.resolve(__dirname, 'node_modules/three/build/three.module.js'),
                 phaser: path.resolve(
                     __dirname,
                     'node_modules/phaser/dist/phaser.js'
@@ -70,14 +72,18 @@ module.exports = (env) => {
                         from: 'assets/img/**',
                         to: '.',
                         globOptions: {
-                            ignore: ['**/*.xcf', '**/*.inkscape.svg'],
+                            ignore: ['**/*.xcf', '**/*.inkscape.svg', '**/*.psd', '**/*source*.png', '**/*.bak.png'],
                         },
                     },
                     { from: 'assets/coins/**', to: '.' },
-                    { from: 'assets/jar/**', to: '.' },
+                    { from: 'assets/jar/frasco1_transparent.png', to: 'assets/jar/frasco1_transparent.png' },
                     { from: 'assets/bg/**', to: '.' },
                     { from: 'assets/sounds/**', to: '.' },
                     { from: 'index.html', to: '.' },
+                    // Guarda de input de SURA. Tiene que llegar al dist o el
+                    // tag del index apunta a un archivo que no existe: el juego
+                    // seguiria andando, pero sin la proteccion y sin aviso.
+                    { from: 'sura-input-guard.js', to: '.' },
                     { from: 'index.css', to: '.' },
                     { from: 'favicon.ico', to: '.' },
                     { from: 'icon*.png', to: '.' },

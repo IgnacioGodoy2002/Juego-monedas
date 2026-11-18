@@ -1,0 +1,45 @@
+COIN KINGDOM — TODOS LOS CAMBIOS
+
+Este ZIP abre directamente con los archivos del proyecto.
+La versión compilada está en la raíz: index.html + bundle.js + assets.
+Las imágenes y sonidos se incluyen una sola vez, compartidos con el código.
+
+PROBAR EL JUEGO
+Extraé TODO el ZIP a una carpeta.
+Desde esa carpeta, si tenés Python instalado:
+  python -m http.server 8080
+Abrí http://localhost:8080 en el navegador.
+También podés usar cualquier servidor HTTP que sirva esta carpeta.
+
+EDITAR Y COMPILAR
+Con Node.js y npm instalados:
+  npm ci
+  npm run dev
+Servidor de desarrollo: http://localhost:8080
+  npm run build
+Este último comando genera una nueva carpeta dist lista para publicar.
+
+CAMBIOS INCLUIDOS
+- Menú nuevo integrado; menú viejo eliminado.
+- Mapache, Capibara, Tucán y Suri para elegir, sin nave.
+- Personaje animado que lanza parejas de monedas desde arriba del frasco.
+- Parejas con movimiento lateral y giro de 90 grados.
+- Velocidad fija de caída, sin aceleración ni caída instantánea.
+- Salidas aleatorias sobre la boca del frasco.
+- Arrastre relativo: dejar el puntero quieto no recentra las nuevas parejas.
+- Único botón inferior: Girar.
+- Adaptación a mobile y escritorio, incluyendo áreas seguras.
+- Fusiones, puntos, récord, sonidos e integración SURA.
+- Tres monedas GG juntas liberan espacio para continuar.
+
+CONTROLES
+Arrastrá el dedo o mouse para mover. Tocá Girar para rotar.
+Teclado: A / D o izquierda / derecha para mover; R o arriba para girar.
+
+VALIDACIÓN
+  npx tsc --noEmit --skipLibCheck
+  node tests/pair-mechanics.cjs
+Se verificaron mecánica y cámara en siete tamaños y varias densidades / áreas seguras.
+No se pudo efectuar la revisión visual completa en navegador en el entorno.
+
+Fuente: cdc08cf0942afa80db9a8a392c911f9ec26723f3
